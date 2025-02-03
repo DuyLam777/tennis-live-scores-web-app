@@ -1,5 +1,9 @@
 # Web App
 
+Required packages/dependencies:
+dotnet-sdk-8.0-bin
+aspnet-runtime-8.0-bin
+
 
 
 ## Getting started
