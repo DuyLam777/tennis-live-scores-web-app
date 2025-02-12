@@ -1,4 +1,4 @@
-using tennis_app.Components;
+using TennisApp.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
