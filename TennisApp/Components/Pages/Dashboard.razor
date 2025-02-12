@@ -1,0 +1,79 @@
+@page "/dashboard"
+@using TennisApp.Models
+
+<PageTitle>Dashboard</PageTitle>
+
+
+@if (Matches == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Match Time</th>
+                <th>Player 1</th>
+                <th>Player 2</th>
+                <th>Player 1 Score</th>
+                <th>Player 2 Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var match in Matches)
+            {
+                <tr>
+                    <td>@match.MatchTime</td>
+                    <td>@match.Player1.Name</td>
+                    <td>@match.Player2.Name</td>
+                    <td>@match.Player1Score</td>
+                    <td>@match.Player2Score</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    private List<Match>? Matches;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Simulate asynchronous loading to demonstrate streaming rendering
+        await Task.Delay(500);
+
+        Player player1 = new Player { Name = "Roger Federer", Country = "Switzerland" };
+        Player player2 = new Player { Name = "Rafael Nadal", Country = "Spain" };
+
+        Matches = new List<Match>
+        {
+            new Match
+            {
+                MatchTime = DateTime.Now,
+                Player1 = player1,
+                Player2 = player2,
+                Player1Score = 6,
+                Player2Score = 4
+            },
+            new Match
+            {
+                MatchTime = DateTime.Now.AddHours(1),
+                Player1 = player2,
+                Player2 = player1,
+                Player1Score = 6,
+                Player2Score = 3
+            }
+        };
+    }
+    private class Match
+    {
+        public DateTime MatchTime { get; set; }
+        public required Player Player1 { get; set; }
+        public required Player Player2 { get; set; }
+        public int Player1Score { get; set; }
+        public int Player2Score { get; set; }
+    }
+}
