@@ -1,8 +1,8 @@
 @page "/dashboard"
 @using TennisApp.Models
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard</PageTitle>
-
 
 @if (Matches == null)
 {
@@ -18,40 +18,46 @@ else
                 <th>Player 2</th>
                 <th>Player 1 Score</th>
                 <th>Player 2 Score</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var match in Matches)
             {
                 <tr>
-                    <td>@match.MatchTime</td>
+                    <td>@match.MatchTime.ToShortTimeString()</td>
                     <td>@match.Player1.Name</td>
                     <td>@match.Player2.Name</td>
                     <td>@match.Player1Score</td>
                     <td>@match.Player2Score</td>
+                    <td>
+                        <a href="@($"/match/{match.MatchId}")" class="btn btn-primary">View Details</a>
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
+<button class="btn btn-success" @onclick="NavigateToAddMatch">Add New Match</button>
+
 
 @code {
-
     private List<Match>? Matches;
 
     protected override async Task OnInitializedAsync()
     {
         // Simulate asynchronous loading to demonstrate streaming rendering
         await Task.Delay(500);
-
-        Player player1 = new Player { Name = "Roger Federer", Country = "Switzerland" };
-        Player player2 = new Player { Name = "Rafael Nadal", Country = "Spain" };
+        Player player1 = new Player { PlayerId = 1, Name = "Roger Federer", Country = "Switzerland", Age = 41, gender = Gender.Male };
+        Player player2 = new Player { PlayerId = 2, Name = "Rafael Nadal", Country = "Spain", Age = 37, gender = Gender.Male };
+        Player player3 = new Player { PlayerId = 3, Name = "Novak Djokovic", Country = "Serbia", Age= 37, gender = Gender.Male };
 
         Matches = new List<Match>
         {
             new Match
             {
+                MatchId = 1,
                 MatchTime = DateTime.Now,
                 Player1 = player1,
                 Player2 = player2,
@@ -60,6 +66,7 @@ else
             },
             new Match
             {
+                MatchId = 2,
                 MatchTime = DateTime.Now.AddHours(1),
                 Player1 = player2,
                 Player2 = player1,
@@ -67,13 +74,13 @@ else
                 Player2Score = 3
             }
         };
+
+        Console.WriteLine("Matches loaded successfully.");
     }
-    private class Match
+
+    private void NavigateToAddMatch()
     {
-        public DateTime MatchTime { get; set; }
-        public required Player Player1 { get; set; }
-        public required Player Player2 { get; set; }
-        public int Player1Score { get; set; }
-        public int Player2Score { get; set; }
+        Console.WriteLine("NavigateToAddMatch method called.");
+        NavigationManager.NavigateTo("/add-match");
     }
 }

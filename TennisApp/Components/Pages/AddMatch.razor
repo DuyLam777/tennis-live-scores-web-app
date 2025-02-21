@@ -1,0 +1,64 @@
+@page "/add-match"
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Add Match</PageTitle>
+
+<h3>Add New Match</h3>
+
+
+<div>
+    <label>Player 1:</label>
+    <input @bind="NewMatch.Player1.Name" placeholder="Player 1 Name" />
+    <input @bind="NewMatch.Player1.Country" placeholder="Player 1 Country" />
+</div>
+<div>
+    <label>Player 2:</label>
+    <input @bind="NewMatch.Player2.Name" placeholder="Player 2 Name" />
+    <input @bind="NewMatch.Player2.Country" placeholder="Player 2 Country" />
+</div>
+<div>
+    <label>Player 1 Score:</label>
+    <input type="number" @bind="NewMatch.Player1Score" />
+</div>
+<div>
+    <label>Player 2 Score:</label>
+    <input type="number" @bind="NewMatch.Player2Score" />
+</div>
+
+<button class="btn btn-primary" @onclick="SaveMatch">Save Match</button>
+
+@code {
+    private MatchDetails NewMatch = new MatchDetails
+    {
+        MatchId = 3, // Assign a unique ID (in real-world scenarios, use a database-generated ID)
+        MatchTime = DateTime.Now,
+        Player1 = new Player
+        {
+            Name = "Player 1", // Default value
+            Country = "Country 1" // Default value
+        },
+        Player2 = new Player
+        {
+            Name = "Player 2", // Default value
+            Country = "Country 2" // Default value
+        }
+    };
+
+    private void SaveMatch()
+    {
+        // Simulate saving the match (e.g., to a database or shared state)
+        Console.WriteLine($"Match Added: {NewMatch.Player1.Name} vs {NewMatch.Player2.Name}");
+        NavigationManager.NavigateTo("/dashboard");
+    }
+
+    private class MatchDetails
+    {
+        public int MatchId { get; set; }
+        public DateTime MatchTime { get; set; }
+        public required Player Player1 { get; set; }
+        public required Player Player2 { get; set; }
+        public int Player1Score { get; set; }
+        public int Player2Score { get; set; }
+    }
+}

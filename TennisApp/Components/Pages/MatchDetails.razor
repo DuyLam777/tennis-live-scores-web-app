@@ -1,0 +1,66 @@
+@page "/match/{MatchId:int}"
+@using TennisApp.Models
+
+<PageTitle>Match Details</PageTitle>
+
+@if (Match == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h3>Match Details</h3>
+    <p><strong>Match Time:</strong> @Match.MatchTime.ToShortTimeString()</p>
+    <p><strong>Player 1:</strong> @Match.Player1.Name (@Match.Player1.Country)</p>
+    <p><strong>Player 2:</strong> @Match.Player2.Name (@Match.Player2.Country)</p>
+    <p><strong>Score:</strong> @Match.Player1Score - @Match.Player2Score</p>
+}
+
+@code {
+    [Parameter]
+    public int MatchId { get; set; }
+
+    private MatchModel? Match; // Renamed from "MatchDetails" to "MatchModel"
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Simulate fetching match details from a service or database
+        await Task.Delay(500); // Simulate delay
+        var player1 = new Player
+        {
+            PlayerId = 1,
+            Name = "Roger Federer",
+            Country = "Switzerland",
+            Age = 41,
+            gender = Gender.Male
+        };
+        var player2 = new Player
+        {
+            PlayerId = 2,
+            Name = "Rafael Nadal",
+            Country = "Spain",
+            Age = 37,
+            gender = Gender.Male
+        };
+
+        Match = new MatchModel // Updated to use "MatchModel"
+        {
+            MatchId = MatchId,
+            MatchTime = MatchId == 1 ? DateTime.Now : DateTime.Now.AddHours(1),
+            Player1 = MatchId == 1 ? player1 : player2,
+            Player2 = MatchId == 1 ? player2 : player1,
+            Player1Score = MatchId == 1 ? 6 : 3,
+            Player2Score = MatchId == 1 ? 4 : 6
+        };
+    }
+
+    private class MatchModel // Renamed from "MatchDetails" to "MatchModel"
+    {
+        public int MatchId { get; set; }
+        public DateTime MatchTime { get; set; }
+        public required Player Player1 { get; set; }
+        public required Player Player2 { get; set; }
+        public int Player1Score { get; set; }
+        public int Player2Score { get; set; }
+    }
+}

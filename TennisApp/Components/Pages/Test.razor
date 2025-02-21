@@ -1,0 +1,13 @@
+@page "/test"
+
+<PageTitle>TEST</PageTitle>
+
+
+<button @onclick="HandleClick">Click Me</button>
+
+@code {
+    private void HandleClick()
+    {
+        Console.WriteLine("Button clicked!");
+    }
+}
