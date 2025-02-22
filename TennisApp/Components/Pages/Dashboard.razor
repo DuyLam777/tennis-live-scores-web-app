@@ -1,6 +1,7 @@
 @page "/dashboard"
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -10,41 +11,27 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Match Time</th>
-                <th>Player 1</th>
-                <th>Player 2</th>
-                <th>Player 1 Score</th>
-                <th>Player 2 Score</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var match in Matches)
-            {
-                <tr>
-                    <td>@match.MatchTime.ToShortTimeString()</td>
-                    <td>@match.Player1.Name</td>
-                    <td>@match.Player2.Name</td>
-                    <td>@match.Player1Score</td>
-                    <td>@match.Player2Score</td>
-                    <td>
+    <div class="row">
+        @foreach (var match in Matches)
+        {
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">@match.Player1.Name vs @match.Player2.Name</h5>
+                        <p class="card-text">@match.MatchTime.ToShortTimeString()</p>
+                        <p class="card-text">Score: @match.Player1Score - @match.Player2Score</p>
                         <a href="@($"/match/{match.MatchId}")" class="btn btn-primary">View Details</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 }
 
 <button class="btn btn-success" @onclick="NavigateToAddMatch">Add New Match</button>
 
-
 @code {
     private List<Match>? Matches;
-
     protected override async Task OnInitializedAsync()
     {
         // Simulate asynchronous loading to demonstrate streaming rendering
@@ -80,7 +67,6 @@ else
 
     private void NavigateToAddMatch()
     {
-        Console.WriteLine("NavigateToAddMatch method called.");
         NavigationManager.NavigateTo("/add-match");
     }
 }

@@ -1,0 +1,41 @@
+@page "/add-player"
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Add Player</PageTitle>
+
+<h3>Add New Player</h3>
+
+<div class="form-group">
+    <label>Name:</label>
+    <input @bind="NewPlayer.Name" class="form-control" placeholder="Player Name" />
+</div>
+<div class="form-group">
+    <label>Country:</label>
+    <input @bind="NewPlayer.Country" class="form-control" placeholder="Player Country" />
+</div>
+<div class="form-group">
+    <label>Age:</label>
+    <input type="number" @bind="NewPlayer.Age" class="form-control" />
+</div>
+<div class="form-group">
+    <label>Gender:</label>
+    <select @bind="NewPlayer.gender" class="form-control">
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select>
+</div>
+
+<button class="btn btn-primary" @onclick="SavePlayer">Save Player</button>
+
+@code {
+    private Player NewPlayer = new Player { Name = string.Empty, Country = string.Empty };
+
+    private void SavePlayer()
+    {
+        // Simulate saving the player 
+        Console.WriteLine($"Player Added: {NewPlayer.Name}");
+        NavigationManager.NavigateTo("/manage-players");
+    }
+}

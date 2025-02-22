@@ -1,5 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@* @using static Microsoft.AspNetCore.Components.Web.RenderMode *@
+
+
+<!DOCTYPE html>
 <html lang="en">
+
 
 <head>
     <meta charset="utf-8" />
@@ -15,6 +19,7 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    @* <Routes @rendermode="InteractiveServer" /> *@
 </body>
 
 </html>

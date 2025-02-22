@@ -1,12 +1,27 @@
 using TennisApp.Components;
 
+// This is the SignalR service registration
+using Microsoft.AspNetCore.ResponseCompression;
+// using TennisApp.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// This is the SignalR service registration
+builder.Services.AddSignalR();
+
+builder.Services.AddResponseCompression(opts =>
+{
+   opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+       [ "application/octet-stream" ]);
+});
+
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

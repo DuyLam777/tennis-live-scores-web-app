@@ -1,0 +1,66 @@
+@page "/manage-players"
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Manage Players</PageTitle>
+
+<h3>Manage Players</h3>
+
+<button class="btn btn-success" @onclick="NavigateToAddPlayer">Add New Player</button>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Country</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var player in Players)
+        {
+            <tr>
+                <td>@player.Name</td>
+                <td>@player.Country</td>
+                <td>@player.Age</td>
+                <td>@player.gender</td>
+                <td>
+                    <button class="btn btn-primary" @onclick="() => EditPlayer(player.PlayerId)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeletePlayer(player.PlayerId)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Player> Players = new List<Player>
+    {
+        new Player { PlayerId = 1, Name = "Roger Federer", Country = "Switzerland", Age = 41, gender = Gender.Male },
+        new Player { PlayerId = 2, Name = "Rafael Nadal", Country = "Spain", Age = 37, gender = Gender.Male },
+        new Player { PlayerId = 3, Name = "Novak Djokovic", Country = "Serbia", Age = 37, gender = Gender.Male }
+    };
+
+    private void NavigateToAddPlayer()
+    {
+        NavigationManager.NavigateTo("/add-player");
+    }
+
+    private void EditPlayer(int playerId)
+    {
+        NavigationManager.NavigateTo($"/edit-player/{playerId}");
+    }
+
+    private void DeletePlayer(int playerId)
+    {
+        // add real functionality
+        var player = Players.FirstOrDefault(p => p.PlayerId == playerId);
+        if (player != null)
+        {
+            Players.Remove(player);
+        }
+    }
+}
