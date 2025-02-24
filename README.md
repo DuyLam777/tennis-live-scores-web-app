@@ -5,6 +5,14 @@ dotnet-sdk-8.0-bin
 aspnet-runtime-8.0-bin
 
 
+Research questions:
+decision for blazor instead of mvc
+connection between the devices/applications (differences between blazor and mvc)
+    - architecture for the connection (Likely 'SignalR')
+    - research blazor architecture further (render modes specifically)
+    - Move the connection up the priority list
+    - 
+
 
 ## Getting started
 
