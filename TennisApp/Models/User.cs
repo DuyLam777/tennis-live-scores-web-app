@@ -1,14 +1,27 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+namespace TennisApp.Models;
+
 public class User
 {
     public int Id { get; set; }
-    public string Email { get; set; }
-    public string PasswordHash { get; set; }
+
+    [DataType(DataType.EmailAddress)]
+    public string? Email { get; set; }
+
+    [DataType(DataType.Password)]
+    public string? Password { get; set; }
     public UserRole Role { get; set; } // Player, ClubAdmin, SystemAdmin
 }
 
 public enum UserRole
 {
+    [Display(Name = "Player")]
     Player,
-    ClubAdmin,
+    [Display(Name = "Club")]
+    Club,
+    [Display(Name = "System Admin")]
     SystemAdmin
 }

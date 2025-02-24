@@ -1,0 +1,136 @@
+@page "/players/edit"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+<h1>Edit</h1>
+<h4>Player</h4>
+<hr />
+@if (Player is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Player" OnValidSubmit="UpdatePlayer" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Player.Id" value="@Player.Id" />
+                <!-- Name -->
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <InputText id="name" @bind-Value="Player.Name" class="form-control" />
+                    <ValidationMessage For="() => Player.Name" class="text-danger" />
+                </div>
+                <!-- Country -->
+                <div class="mb-3">
+                    <label for="country" class="form-label">Country:</label>
+                    <InputText id="country" @bind-Value="Player.Country" class="form-control" />
+                    <ValidationMessage For="() => Player.Country" class="text-danger" />
+                </div>
+                <!-- DateOfBirth -->
+                <!-- DateOfBirth -->
+                <div class="mb-3">
+                    <label for="dateofbirth" class="form-label">Date of Birth:</label>
+                    <InputDate id="dateofbirth" @bind-Value="Player.DateOfBirth" class="form-control" />
+                    <ValidationMessage For="() => Player.DateOfBirth" class="text-danger" />
+                </div>
+                <!-- Gender -->
+                <div class="mb-3">
+                    <label for="gender" class="form-label">Gender:</label>
+                    <InputSelect id="gender" @bind-Value="genderString" class="form-control">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </InputSelect>
+                    <ValidationMessage For="() => Player.gender" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+<div>
+    <a href="/players">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public Player? Player { get; set; }
+
+    // Helper variables for binding non-string properties
+    private string dateOfBirthString = string.Empty;
+    private string genderString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Player ??= await DB.Player.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Player is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            // Initialize helper variables from the model
+            dateOfBirthString = Player!.DateOfBirth.ToString("yyyy-MM-dd"); // Format DateOnly as a string
+            genderString = Player!.gender.ToString(); // Convert Gender enum to string
+        }
+    }
+
+    public async Task UpdatePlayer()
+    {
+        // Parse the helper variables back into their respective types
+        if (DateOnly.TryParse(dateOfBirthString, out var parsedDateOfBirth))
+        {
+            Player!.DateOfBirth = parsedDateOfBirth;
+        }
+        else
+        {
+            // Handle invalid date input (e.g., show an error message)
+            return;
+        }
+
+        if (Enum.TryParse<Gender>(genderString, out var parsedGender))
+        {
+            Player!.gender = parsedGender;
+        }
+        else
+        {
+            // Handle invalid gender input (e.g., show an error message)
+            return;
+        }
+
+        DB.Attach(Player!).State = EntityState.Modified;
+
+        try
+        {
+            await DB.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PlayerExists(Player!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/players");
+    }
+
+    bool PlayerExists(int id)
+    {
+        return DB.Player.Any(e => e.Id == id);
+    }
+}

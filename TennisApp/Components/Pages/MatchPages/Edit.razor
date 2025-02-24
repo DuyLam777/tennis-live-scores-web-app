@@ -1,0 +1,86 @@
+@page "/Matches/edit"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Match</h4>
+<hr />
+@if (Match is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Match" OnValidSubmit="UpdateMatch" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Match.Id" value="@Match.Id" />
+                <div class="mb-3">
+                    <label for="matchtime" class="form-label">MatchTime:</label>
+                    <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" />
+                    <ValidationMessage For="() => Match.MatchTime" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/matches">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public Match? Match { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Match ??= await DB.Match.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Match is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more details, see https://aka.ms/RazorPagesCRUD.
+    public async Task UpdateMatch()
+    {
+        DB.Attach(Match!).State = EntityState.Modified;
+
+        try
+        {
+            await DB.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!MatchExists(Match!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/matches");
+    }
+
+    bool MatchExists(int id)
+    {
+        return DB.Match.Any(e => e.Id == id);
+    }
+}

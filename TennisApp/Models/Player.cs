@@ -1,11 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TennisApp.Models
 {
     public class Player
     {
-        public int PlayerId { get; set; }
-        public required string Name { get; set; }
-        public required string Country { get; set; }
-        public int Age { get; set; }
+        public int Id { get; set; }
+
+        [Required]
+        public string? Name { get; set; }
+        
+        [Required]
+        [StringLength(50)]
+        public string? Country { get; set; }
+        
+        [Required]
+        [DataType(DataType.Date)]
+        public DateOnly DateOfBirth { get; set; }
+        
+        [Required]
         public Gender gender { get; set; }
     }
 

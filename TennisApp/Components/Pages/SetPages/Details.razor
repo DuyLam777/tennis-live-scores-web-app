@@ -1,0 +1,57 @@
+@page "/sets/details"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h4>Set</h4>
+    <hr />
+    @if (set is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">SetNumber</dt>
+            <dd class="col-sm-10">@set.SetNumber</dd>
+            <dt class="col-sm-2">Player1Games</dt>
+            <dd class="col-sm-10">@set.Player1Games</dd>
+            <dt class="col-sm-2">Player2Games</dt>
+            <dd class="col-sm-10">@set.Player2Games</dd>
+            <dt class="col-sm-2">IsCompleted</dt>
+            <dd class="col-sm-10">@set.IsCompleted</dd>
+            <dt class="col-sm-2">WinnerId</dt>
+            <dd class="col-sm-10">@set.WinnerId</dd>
+            <dt class="col-sm-2">StartTime</dt>
+            <dd class="col-sm-10">@set.StartTime</dd>
+            <dt class="col-sm-2">EndTime</dt>
+            <dd class="col-sm-10">@set.EndTime</dd>
+        </dl>
+        <div>
+            <a href="@($"/sets/edit?id={set.Id}")">Edit</a> |
+            <a href="@($"/sets")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    Set? set;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        set = await DB.Set.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (set is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -1,0 +1,48 @@
+@page "/scoreboards/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Scoreboard</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Scoreboard" OnValidSubmit="AddScoreboard" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="batterylevel" class="form-label">BatteryLevel:</label> 
+                <InputNumber id="batterylevel" @bind-Value="Scoreboard.BatteryLevel" class="form-control" /> 
+                <ValidationMessage For="() => Scoreboard.BatteryLevel" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="lastconnected" class="form-label">LastConnected:</label> 
+                <InputDate id="lastconnected" @bind-Value="Scoreboard.LastConnected" class="form-control" /> 
+                <ValidationMessage For="() => Scoreboard.LastConnected" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/scoreboards">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Scoreboard Scoreboard { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddScoreboard()
+    {
+        DB.Scoreboard.Add(Scoreboard);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/scoreboards");
+    }
+}

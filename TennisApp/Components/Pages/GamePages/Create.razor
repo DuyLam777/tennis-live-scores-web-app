@@ -1,0 +1,82 @@
+@page "/games/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+<h1>Create</h1>
+<h4>Game</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Game" OnValidSubmit="AddGame" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <!-- PointsPlayer1 -->
+            <div class="mb-3">
+                <label for="pointsplayer1" class="form-label">PointsPlayer1:</label>
+                <InputTextArea id="pointsplayer1" @bind-Value="pointsPlayer1String" class="form-control" />
+                <ValidationMessage For="() => Game.PointsPlayer1" class="text-danger" />
+            </div>
+
+            <!-- PointsPlayer2 -->
+            <div class="mb-3">
+                <label for="pointsplayer2" class="form-label">PointsPlayer2:</label>
+                <InputTextArea id="pointsplayer2" @bind-Value="pointsPlayer2String" class="form-control" />
+                <ValidationMessage For="() => Game.PointsPlayer2" class="text-danger" />
+            </div>
+
+            <!-- IsCompleted -->
+            <div class="mb-3">
+                <label for="iscompleted" class="form-label">IsCompleted:</label>
+                <InputCheckbox id="iscompleted" @bind-Value="Game.IsCompleted" class="form-check-input" />
+                <ValidationMessage For="() => Game.IsCompleted" class="text-danger" />
+            </div>
+
+            <!-- WinnerId -->
+            <div class="mb-3">
+                <label for="winnerid" class="form-label">WinnerId:</label>
+                <InputNumber id="winnerid" @bind-Value="Game.WinnerId" class="form-control" />
+                <ValidationMessage For="() => Game.WinnerId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+<div>
+    <a href="/games">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Game Game { get; set; } = new();
+
+    private string pointsPlayer1String = string.Empty;
+    private string pointsPlayer2String = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        pointsPlayer1String = string.Join(", ", Game.PointsPlayer1 ?? new List<string>());
+        pointsPlayer2String = string.Join(", ", Game.PointsPlayer2 ?? new List<string>());
+    }
+
+    public async Task AddGame()
+    {
+        Game.PointsPlayer1 = ParseList(pointsPlayer1String);
+        Game.PointsPlayer2 = ParseList(pointsPlayer2String);
+
+        DB.Game.Add(Game);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/games");
+    }
+
+    private List<string> ParseList(string input)
+    {
+        return input
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .ToList();
+    }
+}

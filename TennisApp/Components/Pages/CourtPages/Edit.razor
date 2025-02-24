@@ -1,0 +1,96 @@
+@page "/Courts/edit"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Court</h4>
+<hr />
+@if (Court is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Court" OnValidSubmit="UpdateCourt" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Court.Id" value="@Court.Id" />
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <InputText id="name" @bind-Value="Court.Name" class="form-control" />
+                    <ValidationMessage For="() => Court.Name" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isoccupied" class="form-label">IsOccupied:</label>
+                    <InputCheckbox id="isoccupied" @bind-Value="Court.IsOccupied" class="form-check-input" />
+                    <ValidationMessage For="() => Court.IsOccupied" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isindoor" class="form-label">IsIndoor:</label>
+                    <InputCheckbox id="isindoor" @bind-Value="Court.IsIndoor" class="form-check-input" />
+                    <ValidationMessage For="() => Court.IsIndoor" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/courts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public Court? Court { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Court ??= await DB.Court.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Court is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more details, see https://aka.ms/RazorPagesCRUD.
+    public async Task UpdateCourt()
+    {
+        DB.Attach(Court!).State = EntityState.Modified;
+
+        try
+        {
+            await DB.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!CourtExists(Court!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/courts");
+    }
+
+    bool CourtExists(int id)
+    {
+        return DB.Court.Any(e => e.Id == id);
+    }
+}

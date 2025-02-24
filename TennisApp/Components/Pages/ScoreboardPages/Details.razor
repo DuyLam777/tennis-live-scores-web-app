@@ -1,0 +1,47 @@
+@page "/scoreboards/details"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h4>Scoreboard</h4>
+    <hr />
+    @if (scoreboard is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">BatteryLevel</dt>
+            <dd class="col-sm-10">@scoreboard.BatteryLevel</dd>
+            <dt class="col-sm-2">LastConnected</dt>
+            <dd class="col-sm-10">@scoreboard.LastConnected</dd>
+        </dl>
+        <div>
+            <a href="@($"/scoreboards/edit?id={scoreboard.Id}")">Edit</a> |
+            <a href="@($"/scoreboards")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    Scoreboard? scoreboard;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        scoreboard = await DB.Scoreboard.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (scoreboard is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

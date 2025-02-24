@@ -1,0 +1,57 @@
+@page "/scoreboards/delete"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<h3>Are you sure you want to delete this?</h3>
+<div>
+    <h4>Scoreboard</h4>
+    <hr />
+    @if (scoreboard is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">BatteryLevel</dt>
+            <dd class="col-sm-10">@scoreboard.BatteryLevel</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">LastConnected</dt>
+            <dd class="col-sm-10">@scoreboard.LastConnected</dd>
+        </dl>
+        <EditForm method="post" Model="scoreboard" OnValidSubmit="DeleteScoreboard" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(scoreboard is null)">Delete</button> |
+            <a href="/scoreboards">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    Scoreboard? scoreboard;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        scoreboard = await DB.Scoreboard.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (scoreboard is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task DeleteScoreboard()
+    {
+        DB.Scoreboard.Remove(scoreboard!);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/scoreboards");
+    }
+}

@@ -1,0 +1,73 @@
+@page "/sets/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Set</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Set" OnValidSubmit="AddSet" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="setnumber" class="form-label">SetNumber:</label> 
+                <InputNumber id="setnumber" @bind-Value="Set.SetNumber" class="form-control" /> 
+                <ValidationMessage For="() => Set.SetNumber" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="player1games" class="form-label">Player1Games:</label> 
+                <InputNumber id="player1games" @bind-Value="Set.Player1Games" class="form-control" /> 
+                <ValidationMessage For="() => Set.Player1Games" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="player2games" class="form-label">Player2Games:</label> 
+                <InputNumber id="player2games" @bind-Value="Set.Player2Games" class="form-control" /> 
+                <ValidationMessage For="() => Set.Player2Games" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="iscompleted" class="form-label">IsCompleted:</label> 
+                <InputCheckbox id="iscompleted" @bind-Value="Set.IsCompleted" class="form-check-input" /> 
+                <ValidationMessage For="() => Set.IsCompleted" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="winnerid" class="form-label">WinnerId:</label> 
+                <InputNumber id="winnerid" @bind-Value="Set.WinnerId" class="form-control" /> 
+                <ValidationMessage For="() => Set.WinnerId" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="starttime" class="form-label">StartTime:</label> 
+                <InputDate id="starttime" @bind-Value="Set.StartTime" class="form-control" /> 
+                <ValidationMessage For="() => Set.StartTime" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="endtime" class="form-label">EndTime:</label> 
+                <InputDate id="endtime" @bind-Value="Set.EndTime" class="form-control" /> 
+                <ValidationMessage For="() => Set.EndTime" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/sets">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Set Set { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddSet()
+    {
+        DB.Set.Add(Set);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/sets");
+    }
+}

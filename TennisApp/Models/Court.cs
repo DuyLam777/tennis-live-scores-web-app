@@ -1,7 +1,19 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+
+namespace TennisApp.Models;
 public class Court
 {
     public int Id { get; set; }
-    public string Name { get; set; } // e.g., "Court 1"
+
+    [Required]
+    public string? Name { get; set; }
+
+    [DefaultValue(false)]
     public bool IsOccupied { get; set; }
-    public int ClubId { get; set; } // Foreign key to Club
+
+    [Required]
+    public bool IsIndoor { get; set; }
 }

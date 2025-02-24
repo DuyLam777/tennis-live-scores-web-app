@@ -1,0 +1,51 @@
+@page "/players/details"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h4>Player</h4>
+    <hr />
+    @if (player is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Name</dt>
+            <dd class="col-sm-10">@player.Name</dd>
+            <dt class="col-sm-2">Country</dt>
+            <dd class="col-sm-10">@player.Country</dd>
+            <dt class="col-sm-2">DateOfBirth</dt>
+            <dd class="col-sm-10">@player.DateOfBirth</dd>
+            <dt class="col-sm-2">gender</dt>
+            <dd class="col-sm-10">@player.gender</dd>
+        </dl>
+        <div>
+            <a href="@($"/players/edit?id={player.Id}")">Edit</a> |
+            <a href="@($"/players")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    Player? player;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        player = await DB.Player.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (player is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -1,0 +1,28 @@
+@page "/sets"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="sets/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="DB.Set">
+    <PropertyColumn Property="set => set.SetNumber" />
+    <PropertyColumn Property="set => set.Player1Games" />
+    <PropertyColumn Property="set => set.Player2Games" />
+    <PropertyColumn Property="set => set.IsCompleted" />
+    <PropertyColumn Property="set => set.WinnerId" />
+    <PropertyColumn Property="set => set.StartTime" />
+    <PropertyColumn Property="set => set.EndTime" />
+
+    <TemplateColumn Context="set">
+        <a href="@($"sets/edit?id={set.Id}")">Edit</a> |
+        <a href="@($"sets/details?id={set.Id}")">Details</a> |
+        <a href="@($"sets/delete?id={set.Id}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>

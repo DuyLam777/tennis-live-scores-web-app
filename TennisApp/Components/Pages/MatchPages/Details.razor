@@ -1,0 +1,45 @@
+@page "/matches/details"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h4>Match</h4>
+    <hr />
+    @if (match is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">MatchTime</dt>
+            <dd class="col-sm-10">@match.MatchTime</dd>
+        </dl>
+        <div>
+            <a href="@($"/matches/edit?id={match.Id}")">Edit</a> |
+            <a href="@($"/matches")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    Match? match;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        match = await DB.Match.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (match is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

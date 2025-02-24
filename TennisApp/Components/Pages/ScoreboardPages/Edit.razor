@@ -1,0 +1,91 @@
+@page "/Scoreboards/edit"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Scoreboard</h4>
+<hr />
+@if (Scoreboard is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Scoreboard" OnValidSubmit="UpdateScoreboard" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Scoreboard.Id" value="@Scoreboard.Id" />
+                <div class="mb-3">
+                    <label for="batterylevel" class="form-label">BatteryLevel:</label>
+                    <InputNumber id="batterylevel" @bind-Value="Scoreboard.BatteryLevel" class="form-control" />
+                    <ValidationMessage For="() => Scoreboard.BatteryLevel" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="lastconnected" class="form-label">LastConnected:</label>
+                    <InputDate id="lastconnected" @bind-Value="Scoreboard.LastConnected" class="form-control" />
+                    <ValidationMessage For="() => Scoreboard.LastConnected" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/scoreboards">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public Scoreboard? Scoreboard { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Scoreboard ??= await DB.Scoreboard.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Scoreboard is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more details, see https://aka.ms/RazorPagesCRUD.
+    public async Task UpdateScoreboard()
+    {
+        DB.Attach(Scoreboard!).State = EntityState.Modified;
+
+        try
+        {
+            await DB.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ScoreboardExists(Scoreboard!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/scoreboards");
+    }
+
+    bool ScoreboardExists(int id)
+    {
+        return DB.Scoreboard.Any(e => e.Id == id);
+    }
+}

@@ -1,0 +1,43 @@
+@page "/matches/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Match</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Match" OnValidSubmit="AddMatch" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="matchtime" class="form-label">MatchTime:</label> 
+                <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" /> 
+                <ValidationMessage For="() => Match.MatchTime" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/matches">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Match Match { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddMatch()
+    {
+        DB.Match.Add(Match);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/matches");
+    }
+}

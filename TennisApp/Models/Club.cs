@@ -1,8 +1,15 @@
+
+using System.ComponentModel.DataAnnotations;
+
+namespace TennisApp.Models;
 public class Club
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Address { get; set; }
-    public List<Court> Courts { get; set; } = new();
-    public List<Scoreboard> Scoreboards { get; set; } = new();
+
+    [Required]
+    [MaxLength(40)]
+    public string? Name { get; set; }
+
+    public List<Player> Players { get; set; } = [];
+
 }

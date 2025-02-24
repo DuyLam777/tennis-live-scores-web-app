@@ -1,0 +1,23 @@
+@page "/scoreboards"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="scoreboards/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="DB.Scoreboard">
+    <PropertyColumn Property="scoreboard => scoreboard.BatteryLevel" />
+    <PropertyColumn Property="scoreboard => scoreboard.LastConnected" />
+
+    <TemplateColumn Context="scoreboard">
+        <a href="@($"scoreboards/edit?id={scoreboard.Id}")">Edit</a> |
+        <a href="@($"scoreboards/details?id={scoreboard.Id}")">Details</a> |
+        <a href="@($"scoreboards/delete?id={scoreboard.Id}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>

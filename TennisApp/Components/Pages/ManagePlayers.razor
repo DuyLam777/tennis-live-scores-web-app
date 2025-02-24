@@ -25,11 +25,11 @@
             <tr>
                 <td>@player.Name</td>
                 <td>@player.Country</td>
-                <td>@player.Age</td>
+                <td>@player.DateOfBirth</td>
                 <td>@player.gender</td>
                 <td>
-                    <button class="btn btn-primary" @onclick="() => EditPlayer(player.PlayerId)">Edit</button>
-                    <button class="btn btn-danger" @onclick="() => DeletePlayer(player.PlayerId)">Delete</button>
+                    <button class="btn btn-primary" @onclick="() => EditPlayer(player.Id)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeletePlayer(player.Id)">Delete</button>
                 </td>
             </tr>
         }
@@ -39,9 +39,9 @@
 @code {
     private List<Player> Players = new List<Player>
     {
-        new Player { PlayerId = 1, Name = "Roger Federer", Country = "Switzerland", Age = 41, gender = Gender.Male },
-        new Player { PlayerId = 2, Name = "Rafael Nadal", Country = "Spain", Age = 37, gender = Gender.Male },
-        new Player { PlayerId = 3, Name = "Novak Djokovic", Country = "Serbia", Age = 37, gender = Gender.Male }
+        new Player { Id = 1, Name = "Roger Federer", Country = "Switzerland", gender = Gender.Male },
+        new Player { Id = 2, Name = "Rafael Nadal", Country = "Spain", gender = Gender.Male },
+        new Player { Id = 3, Name = "Novak Djokovic", Country = "Serbia", gender = Gender.Male }
     };
 
     private void NavigateToAddPlayer()
@@ -57,7 +57,7 @@
     private void DeletePlayer(int playerId)
     {
         // add real functionality
-        var player = Players.FirstOrDefault(p => p.PlayerId == playerId);
+        var player = Players.FirstOrDefault(p => p.Id == playerId);
         if (player != null)
         {
             Players.Remove(player);

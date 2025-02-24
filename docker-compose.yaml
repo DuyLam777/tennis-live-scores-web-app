@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: tennisapp-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tennisappdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tennisapp-network
+
+networks:
+  tennisapp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

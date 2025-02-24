@@ -1,0 +1,53 @@
+@page "/courts/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Court</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Court" OnValidSubmit="AddCourt" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label> 
+                <InputText id="name" @bind-Value="Court.Name" class="form-control" /> 
+                <ValidationMessage For="() => Court.Name" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="isoccupied" class="form-label">IsOccupied:</label> 
+                <InputCheckbox id="isoccupied" @bind-Value="Court.IsOccupied" class="form-check-input" /> 
+                <ValidationMessage For="() => Court.IsOccupied" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="isindoor" class="form-label">IsIndoor:</label> 
+                <InputCheckbox id="isindoor" @bind-Value="Court.IsIndoor" class="form-check-input" /> 
+                <ValidationMessage For="() => Court.IsIndoor" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/courts">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Court Court { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddCourt()
+    {
+        DB.Court.Add(Court);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/courts");
+    }
+}

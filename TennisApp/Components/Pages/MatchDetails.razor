@@ -11,56 +11,151 @@ else
 {
     <h3>Match Details</h3>
     <p><strong>Match Time:</strong> @Match.MatchTime.ToShortTimeString()</p>
-    <p><strong>Player 1:</strong> @Match.Player1.Name (@Match.Player1.Country)</p>
-    <p><strong>Player 2:</strong> @Match.Player2.Name (@Match.Player2.Country)</p>
-    <p><strong>Score:</strong> @Match.Player1Score - @Match.Player2Score</p>
+    <p><strong>Court:</strong> @(Match.Court?.Name ?? "N/A")</p>
+    <p><strong>Scoreboard Battery Level:</strong> @(Match.Scoreboard?.BatteryLevel.ToString() ?? "N/A")%</p>
+    <p><strong>Last Connected:</strong> @(Match.Scoreboard?.LastConnected.ToString("g") ?? "N/A")</p>
+    
+    <h4>Players</h4>
+    <ul>
+        <li><strong>Player 1:</strong> @(Match.Player1 != null ? $"{Match.Player1.Name} ({Match.Player1.Country})" : "N/A")</li>
+        <li><strong>Player 2:</strong> @(Match.Player2 != null ? $"{Match.Player2.Name} ({Match.Player2.Country})" : "N/A")</li>
+    </ul>
+
+    <h4>Sets</h4>
+    @if (Match.Sets.Count == 0)
+    {
+        <p>No sets have been played yet.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Set Number</th>
+                    <th>Player 1 Games</th>
+                    <th>Player 2 Games</th>
+                    <th>Winner</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var set in Match.Sets)
+                {
+                    <tr>
+                        <td>Set @set.SetNumber</td>
+                        <td>@set.Player1Games</td>
+                        <td>@set.Player2Games</td>
+                        <td>
+                            @if (set.WinnerId.HasValue)
+                            {
+                                var winner = set.WinnerId == 1 ? Match.Player1 : Match.Player2;
+                                <text>@(winner?.Name ?? "Unknown")</text>
+                            }
+                            else
+                            {
+                                <text>N/A</text>
+                            }
+                        </td>
+                        <td>@(set.IsCompleted ? "Completed" : "In Progress")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 
 @code {
     [Parameter]
     public int MatchId { get; set; }
 
-    private MatchModel? Match; // Renamed from "MatchDetails" to "MatchModel"
+    private Match? Match;
 
     protected override async Task OnParametersSetAsync()
     {
         // Simulate fetching match details from a service or database
         await Task.Delay(500); // Simulate delay
+
+        // Simulated players
         var player1 = new Player
         {
-            PlayerId = 1,
+            Id = 1,
             Name = "Roger Federer",
             Country = "Switzerland",
-            Age = 41,
+            DateOfBirth = DateOnly.Parse("1981-08-08"),
             gender = Gender.Male
         };
         var player2 = new Player
         {
-            PlayerId = 2,
+            Id = 2,
             Name = "Rafael Nadal",
             Country = "Spain",
-            Age = 37,
+            DateOfBirth = DateOnly.Parse("1986-06-03"),
             gender = Gender.Male
         };
 
-        Match = new MatchModel // Updated to use "MatchModel"
+        // Simulated court
+        var court = new Court
         {
-            MatchId = MatchId,
+            Id = 1,
+            Name = "Center Court",
+            IsIndoor = false,
+            IsOccupied = true
+        };
+
+        // Simulated scoreboard
+        var scoreboard = new Scoreboard
+        {
+            Id = 1,
+            BatteryLevel = 75,
+            LastConnected = DateTime.UtcNow.AddMinutes(-10)
+        };
+
+        // Simulated sets
+        var sets = new List<Set>
+        {
+            new Set
+            {
+                Id = 1,
+                SetNumber = 1,
+                Player1Games = 6,
+                Player2Games = 4,
+                WinnerId = 1,
+                IsCompleted = true,
+                StartTime = DateTime.UtcNow.AddHours(-2),
+                EndTime = DateTime.UtcNow.AddHours(-1)
+            },
+            new Set
+            {
+                Id = 2,
+                SetNumber = 2,
+                Player1Games = 5,
+                Player2Games = 7,
+                WinnerId = 2,
+                IsCompleted = true,
+                StartTime = DateTime.UtcNow.AddHours(-1),
+                EndTime = DateTime.UtcNow
+            },
+            new Set
+            {
+                Id = 3,
+                SetNumber = 3,
+                Player1Games = 3,
+                Player2Games = 2,
+                IsCompleted = false,
+                StartTime = DateTime.UtcNow
+            }
+        };
+
+        // Simulated match
+        Match = new Match
+        {
+            Id = MatchId,
             MatchTime = MatchId == 1 ? DateTime.Now : DateTime.Now.AddHours(1),
             Player1 = MatchId == 1 ? player1 : player2,
             Player2 = MatchId == 1 ? player2 : player1,
-            Player1Score = MatchId == 1 ? 6 : 3,
-            Player2Score = MatchId == 1 ? 4 : 6
+            Court = court,
+            Scoreboard = scoreboard,
+            Sets = sets
         };
-    }
-
-    private class MatchModel // Renamed from "MatchDetails" to "MatchModel"
-    {
-        public int MatchId { get; set; }
-        public DateTime MatchTime { get; set; }
-        public required Player Player1 { get; set; }
-        public required Player Player2 { get; set; }
-        public int Player1Score { get; set; }
-        public int Player2Score { get; set; }
     }
 }

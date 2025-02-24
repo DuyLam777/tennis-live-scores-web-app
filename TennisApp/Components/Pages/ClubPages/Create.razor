@@ -1,0 +1,43 @@
+@page "/clubs/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Club</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Club" OnValidSubmit="AddClub" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label> 
+                <InputText id="name" @bind-Value="Club.Name" class="form-control" /> 
+                <ValidationMessage For="() => Club.Name" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/clubs">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Club Club { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddClub()
+    {
+        DB.Club.Add(Club);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/clubs");
+    }
+}

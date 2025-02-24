@@ -1,0 +1,82 @@
+@page "/users/create"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@using TennisApp.Utils
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Create</PageTitle>
+<h1>Create</h1>
+<h4>User</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="User" OnValidSubmit="AddUser" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label for="email" class="form-label">Email:</label>
+                <InputText id="email" @bind-Value="User.Email" class="form-control" />
+                <ValidationMessage For="() => User.Email" class="text-danger" />
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+                <label for="password" class="form-label">Password:</label>
+                <InputText id="password" @bind-Value="User.Password" class="form-control" />
+                <ValidationMessage For="() => User.Password" class="text-danger" />
+            </div>
+
+            <!-- Role -->
+            <div class="mb-3">
+                <label for="role" class="form-label">Role:</label>
+                <InputSelect id="role" @bind-Value="roleString" class="form-control">
+                    @foreach (var role in Enum.GetValues<UserRole>())
+                    {
+                        <option value="@role">@EnumHelper.GetDisplayName(role)</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => User.Role" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+<div>
+    <a href="/users">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public User User { get; set; } = new();
+
+    // Helper variable for binding non-string Role property
+    private string? roleString;
+
+    protected override void OnInitialized()
+    {
+        // Initialize helper variable with a default value
+        roleString = UserRole.Player.ToString(); // Default role
+    }
+
+    public async Task AddUser()
+    {
+        // Parse the helper variable back into the Role enum
+        if (Enum.TryParse<UserRole>(roleString, out var parsedRole))
+        {
+            User.Role = parsedRole;
+        }
+        else
+        {
+            // Handle invalid role input (e.g., show an error message)
+            return;
+        }
+
+        DB.User.Add(User);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/users");
+    }
+}

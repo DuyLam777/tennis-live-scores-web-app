@@ -1,0 +1,131 @@
+@page "/games/edit"
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Edit</PageTitle>
+<h1>Edit</h1>
+<h4>Game</h4>
+<hr />
+
+@if (Game is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Game" OnValidSubmit="UpdateGame" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Game.Id" value="@Game.Id" />
+
+                <!-- PointsPlayer1 -->
+                <div class="mb-3">
+                    <label for="pointsplayer1" class="form-label">PointsPlayer1:</label>
+                    <InputTextArea id="pointsplayer1" @bind-Value="pointsPlayer1String" class="form-control" />
+                    <ValidationMessage For="() => Game.PointsPlayer1" class="text-danger" />
+                </div>
+
+                <!-- PointsPlayer2 -->
+                <div class="mb-3">
+                    <label for="pointsplayer2" class="form-label">PointsPlayer2:</label>
+                    <InputTextArea id="pointsplayer2" @bind-Value="pointsPlayer2String" class="form-control" />
+                    <ValidationMessage For="() => Game.PointsPlayer2" class="text-danger" />
+                </div>
+
+                <!-- IsCompleted -->
+                <div class="mb-3">
+                    <label for="iscompleted" class="form-label">IsCompleted:</label>
+                    <InputCheckbox id="iscompleted" @bind-Value="Game.IsCompleted" class="form-check-input" />
+                    <ValidationMessage For="() => Game.IsCompleted" class="text-danger" />
+                </div>
+
+                <!-- WinnerId -->
+                <div class="mb-3">
+                    <label for="winnerid" class="form-label">WinnerId:</label>
+                    <InputNumber id="winnerid" @bind-Value="Game.WinnerId" class="form-control" />
+                    <ValidationMessage For="() => Game.WinnerId" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/games">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public Game? Game { get; set; }
+
+    // Helper variables for binding List<string> properties
+    private string pointsPlayer1String = string.Empty;
+    private string pointsPlayer2String = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Game ??= await DB.Game.FirstOrDefaultAsync(m => m.Id == Id);
+        if (Game is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            // Initialize helper variables from the model
+            pointsPlayer1String = string.Join(", ", Game.PointsPlayer1 ?? new List<string>());
+            pointsPlayer2String = string.Join(", ", Game.PointsPlayer2 ?? new List<string>());
+        }
+    }
+
+    public async Task UpdateGame()
+    {
+        if (Game is null) return;
+
+        // Parse the helper variables back into List<string>
+        Game.PointsPlayer1 = ParseList(pointsPlayer1String);
+        Game.PointsPlayer2 = ParseList(pointsPlayer2String);
+
+        DB.Attach(Game).State = EntityState.Modified;
+
+        try
+        {
+            await DB.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!GameExists(Game.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/games");
+    }
+
+    bool GameExists(int id)
+    {
+        return DB.Game.Any(e => e.Id == id);
+    }
+
+    // Helper method to parse a comma-separated string into a List<string>
+    private List<string> ParseList(string input)
+    {
+        return input
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .ToList();
+    }
+}

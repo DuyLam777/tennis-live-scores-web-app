@@ -1,4 +1,4 @@
-@page "/dashboard"
+@page "/"
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
@@ -12,15 +12,33 @@
 else
 {
     <div class="row">
-        @foreach (var match in Matches)
+        @foreach (var match in Matches ?? Enumerable.Empty<Match>())
         {
             <div class="col-md-4">
                 <div class="card mb-4">
                     <div class="card-body">
-                        <h5 class="card-title">@match.Player1.Name vs @match.Player2.Name</h5>
+                        <h5 class="card-title">
+                            @(match.Player1?.Name ?? "Unknown Player") vs @(match.Player2?.Name ?? "Unknown Player")
+                        </h5>
                         <p class="card-text">@match.MatchTime.ToShortTimeString()</p>
-                        <p class="card-text">Score: @match.Player1Score - @match.Player2Score</p>
-                        <a href="@($"/match/{match.MatchId}")" class="btn btn-primary">View Details</a>
+
+                        <p class="card-text">
+                            @if (match.Sets != null && match.Sets.Any())
+                            {
+                                @foreach (var set in match.Sets)
+                                {
+                                    <span>
+                                        Set @set.SetNumber: @set.Player1Games - @set.Player2Games
+                                        @(set.IsCompleted ? "(Completed)" : "(In Progress)")
+                                    </span><br />
+                                }
+                            }
+                            else
+                            {
+                                <span>No sets available.</span>
+                            }
+                        </p>
+                        <a href="@($"/match/{match.Id}")" class="btn btn-primary">View Details</a>
                     </div>
                 </div>
             </div>
@@ -32,41 +50,43 @@ else
 
 @code {
     private List<Match>? Matches;
+
     protected override async Task OnInitializedAsync()
     {
         // Simulate asynchronous loading to demonstrate streaming rendering
         await Task.Delay(500);
-        Player player1 = new Player { PlayerId = 1, Name = "Roger Federer", Country = "Switzerland", Age = 41, gender = Gender.Male };
-        Player player2 = new Player { PlayerId = 2, Name = "Rafael Nadal", Country = "Spain", Age = 37, gender = Gender.Male };
-        Player player3 = new Player { PlayerId = 3, Name = "Novak Djokovic", Country = "Serbia", Age= 37, gender = Gender.Male };
 
+        // Example data initialization (replace with actual database query)
         Matches = new List<Match>
         {
             new Match
             {
-                MatchId = 1,
+                Id = 1,
+                Player1 = new Player { Name = "Roger Federer", Country = "Switzerland" },
+                Player2 = new Player { Name = "Rafael Nadal", Country = "Spain" },
                 MatchTime = DateTime.Now,
-                Player1 = player1,
-                Player2 = player2,
-                Player1Score = 6,
-                Player2Score = 4
+                Sets = new List<Set>
+                {
+                    new Set { SetNumber = 1, Player1Games = 6, Player2Games = 4, IsCompleted = true },
+                    new Set { SetNumber = 2, Player1Games = 3, Player2Games = 6, IsCompleted = false }
+                }
             },
             new Match
             {
-                MatchId = 2,
+                Id = 2,
+                Player1 = new Player { Name = "Novak Djokovic", Country = "Serbia" },
+                Player2 = new Player { Name = "Andy Murray", Country = "UK" },
                 MatchTime = DateTime.Now.AddHours(1),
-                Player1 = player2,
-                Player2 = player1,
-                Player1Score = 6,
-                Player2Score = 3
+                Sets = new List<Set>
+                {
+                    new Set { SetNumber = 1, Player1Games = 7, Player2Games = 6, IsCompleted = true }
+                }
             }
         };
-
-        // Console.WriteLine("Matches loaded successfully."); 
     }
 
     private void NavigateToAddMatch()
     {
-        NavigationManager.NavigateTo("/add-match");
+        NavigationManager.NavigateTo("/matches/create");
     }
 }

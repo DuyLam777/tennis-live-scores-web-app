@@ -1,0 +1,22 @@
+@page "/clubs"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.Models
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="clubs/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="DB.Club">
+    <PropertyColumn Property="club => club.Name" />
+
+    <TemplateColumn Context="club">
+        <a href="@($"clubs/edit?id={club.Id}")">Edit</a> |
+        <a href="@($"clubs/details?id={club.Id}")">Details</a> |
+        <a href="@($"clubs/delete?id={club.Id}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
