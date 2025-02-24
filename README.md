@@ -12,6 +12,8 @@ connection between the devices/applications (differences between blazor and mvc)
     - Move the connection up the priority list
 
 commands and packages used:
+
+```bash
 dotnet aspnet-codegenerator blazor CRUD -dbProvider postgres -dc TennisApp.Data.TennisAppContext -m TennisApp -outDir Components/Pages
 dotnet tool install --global dotnet-aspnet-codegenerator
 dotnet tool install --global dotnet-ef
@@ -28,6 +30,7 @@ dotnet add package Microsoft.AspNetCore.Components.QuickGrid --version 8.0.0
 dotnet add package Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter --version 8.0.0
 dotnet ef migrations add InitialCreate
 dotnet ef database update
+```
 
 ## Getting started
 
