@@ -4,15 +4,30 @@ Required packages/dependencies:
 dotnet-sdk-8.0-bin
 aspnet-runtime-8.0-bin
 
-
 Research questions:
 decision for blazor instead of mvc
 connection between the devices/applications (differences between blazor and mvc)
     - architecture for the connection (Likely 'SignalR')
     - research blazor architecture further (render modes specifically)
     - Move the connection up the priority list
-    - 
 
+commands and packages used:
+dotnet aspnet-codegenerator blazor CRUD -dbProvider postgres -dc TennisApp.Data.TennisAppContext -m TennisApp -outDir Components/Pages
+dotnet tool install --global dotnet-aspnet-codegenerator
+dotnet tool install --global dotnet-ef
+dotnet tool install --global dotnet-aspnet-codegenerator --version 8.0.0
+dotnet tool install --global dotnet-ef --version 8.0.0
+echo 'export PATH="$PATH:/home/luka/.dotnet/tools"' >> ~/.zshrc
+dotnet aspnet-codegenerator blazor CRUD -dbProvider postgres -dc TennisApp.Data.TennisAppContext -m TennisApp.Models.Match -outDir Components/Pages
+dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design --version 8.0.0
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 8.0.0
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 8.0.0
+dotnet add package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore --version 8.0.0
+dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 8.0.0
+dotnet add package Microsoft.AspNetCore.Components.QuickGrid --version 8.0.0
+dotnet add package Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter --version 8.0.0
+dotnet ef migrations add InitialCreate
+dotnet ef database update
 
 ## Getting started
 
