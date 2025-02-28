@@ -1,10 +1,10 @@
 using TennisApp.Components;
 using TennisApp.Data;
-// This is the SignalR service registration
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-// using TennisApp.Hubs;
+using System.Net.WebSockets;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,16 +35,54 @@ app.UseResponseCompression();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+// Enable WebSockets
+app.UseWebSockets();
+
+// Map WebSocket endpoint
+app.Map("/ws", async context =>
+{
+    if (context.WebSockets.IsWebSocketRequest)
+    {
+        using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+        await HandleWebSocketConnection(webSocket);
+    }
+    else
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+    }
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// WebSocket handler method (This will be moved to a separate class in the future)
+async Task HandleWebSocketConnection(WebSocket webSocket)
+{
+    var buffer = new byte[1024 * 4];
+    while (webSocket.State == WebSocketState.Open)
+    {
+        var result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
+        if (result.MessageType == WebSocketMessageType.Text)
+        {
+            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            Console.WriteLine($"Received: {message}");
+
+            // Echo the message back for now
+            await webSocket.SendAsync(buffer[..result.Count], WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        else if (result.MessageType == WebSocketMessageType.Close)
+        {
+            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+        }
+    }
+}
 
 // Ensure the database is dropped and recreated on startup
 using (var scope = app.Services.CreateScope())
