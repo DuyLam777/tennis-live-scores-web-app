@@ -6,7 +6,16 @@ using Microsoft.AspNetCore.Identity;
 using System.Net.WebSockets;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(args);
+// This is necessary for the physical android device to connect to the server from the MAUI app
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = "wwwroot",
+    ContentRootPath = AppContext.BaseDirectory,
+    EnvironmentName = Environments.Development
+});
+// Bind to all network interfaces
+builder.WebHost.UseUrls("http://0.0.0.0:5020");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
