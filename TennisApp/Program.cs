@@ -1,29 +1,32 @@
-using TennisApp.Components;
-using TennisApp.Data;
-using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using System.Net.WebSockets;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.EntityFrameworkCore;
+using TennisApp.Components;
+using TennisApp.Data;
 
 // This is necessary for the physical android device to connect to the server from the MAUI app
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    WebRootPath = "wwwroot",
-    ContentRootPath = AppContext.BaseDirectory,
-    EnvironmentName = Environments.Development
-});
+var builder = WebApplication.CreateBuilder(
+    new WebApplicationOptions
+    {
+        Args = args,
+        WebRootPath = "wwwroot",
+        ContentRootPath = AppContext.BaseDirectory,
+        EnvironmentName = Environments.Development,
+    }
+);
+
 // Bind to all network interfaces
 builder.WebHost.UseUrls("http://0.0.0.0:5020");
 
 // Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 // Register the DbContext with PostgreSQL
 builder.Services.AddDbContext<TennisAppContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
@@ -31,8 +34,7 @@ builder.Services.AddQuickGridEntityFrameworkAdapter();
 builder.Services.AddSignalR();
 builder.Services.AddResponseCompression(opts =>
 {
-    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-        ["application/octet-stream"]);
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
 });
 
 var app = builder.Build();
@@ -55,21 +57,23 @@ app.UseAntiforgery();
 app.UseWebSockets();
 
 // Map WebSocket endpoint
-app.Map("/ws", async context =>
-{
-    if (context.WebSockets.IsWebSocketRequest)
+app.Map(
+    "/ws",
+    async context =>
     {
-        using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-        await HandleWebSocketConnection(webSocket);
+        if (context.WebSockets.IsWebSocketRequest)
+        {
+            using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            await HandleWebSocketConnection(webSocket);
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        }
     }
-    else
-    {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-    }
-});
+);
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 // WebSocket handler method (This will be moved to a separate class in the future)
 async Task HandleWebSocketConnection(WebSocket webSocket)
@@ -84,11 +88,20 @@ async Task HandleWebSocketConnection(WebSocket webSocket)
             Console.WriteLine($"Received: {message}");
 
             // Echo the message back for now
-            await webSocket.SendAsync(buffer[..result.Count], WebSocketMessageType.Text, true, CancellationToken.None);
+            await webSocket.SendAsync(
+                buffer[..result.Count],
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None
+            );
         }
         else if (result.MessageType == WebSocketMessageType.Close)
         {
-            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+            await webSocket.CloseAsync(
+                WebSocketCloseStatus.NormalClosure,
+                "Closing",
+                CancellationToken.None
+            );
         }
     }
 }
