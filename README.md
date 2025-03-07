@@ -11,6 +11,29 @@ connection between the devices/applications (differences between blazor and mvc)
     - research blazor architecture further (render modes specifically)
     - Move the connection up the priority list
 
+
+Here is the curl commands:
+### Create match
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{
+    "courtId": 1,
+    "matchTime": "2024-03-20T15:00:00Z",
+    "player1Id": 1,
+    "player2Id": 2,
+    "scoreboardId": 1
+}' http://localhost:5020/api/matches
+```
+
+### Get Players
+```bash
+    curl -X GET http://localhost:5020/api/players
+```
+
+### Get Courts
+```bash
+    curl -X GET http://localhost:5020/api/courts
+```
+
 commands and packages used:
 
 ```bash
