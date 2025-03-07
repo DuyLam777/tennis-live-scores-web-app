@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddControllers();
+
 // Register the DbContext with PostgreSQL
 builder.Services.AddDbContext<TennisAppContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -41,10 +43,14 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// This could cause issues with the create pages. If it does, remove it since it's not necessary for the project.
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapControllers();
 
 // Ensure the database is dropped and recreated on startup
 using (var scope = app.Services.CreateScope())

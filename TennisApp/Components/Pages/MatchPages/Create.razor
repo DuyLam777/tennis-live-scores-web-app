@@ -1,6 +1,7 @@
 @page "/matches/create"
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager NavigationManager
 
 <PageTitle>Create</PageTitle>
@@ -9,35 +10,134 @@
 
 <h4>Match</h4>
 <hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Match" OnValidSubmit="AddMatch" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
-            <div class="mb-3">
-                <label for="matchtime" class="form-label">MatchTime:</label> 
-                <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" /> 
-                <ValidationMessage For="() => Match.MatchTime" class="text-danger" /> 
-            </div>        
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm Model="@match" OnValidSubmit="AddMatch" FormName="create" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label for="court" class="form-label">Court:</label>
+                    <InputSelect id="court" @bind-Value="match.CourtId" class="form-control">
+                        <option value="0">-- Select a Court --</option>
+                        @foreach (var court in courts)
+                        {
+                            <option value="@court.Id">@court.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => match.CourtId" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="matchtime" class="form-label">Match Time:</label>
+                    <InputDate id="matchtime" @bind-Value="match.MatchTime" class="form-control" />
+                    <ValidationMessage For="() => match.MatchTime" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="player1" class="form-label">Player 1:</label>
+                    <InputSelect id="player1" @bind-Value="match.Player1Id" class="form-control">
+                        <option value="0">-- Select Player 1 --</option>
+                        @foreach (var player in players)
+                        {
+                            <option value="@player.Id">@player.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => match.Player1Id" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="player2" class="form-label">Player 2:</label>
+                    <InputSelect id="player2" @bind-Value="match.Player2Id" class="form-control">
+                        <option value="0">-- Select Player 2 --</option>
+                        @foreach (var player in players)
+                        {
+                            <option value="@player.Id">@player.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => match.Player2Id" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="scoreboard" class="form-label">Scoreboard:</label>
+                    <InputSelect id="scoreboard" @bind-Value="match.ScoreboardId" class="form-control">
+                        <option value="0">-- Select a Scoreboard --</option>
+                        @foreach (var scoreboard in scoreboards)
+                        {
+                            <option value="@scoreboard.Id">@scoreboard.Id</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => match.ScoreboardId" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="button" @onclick="LogMatchState" class="btn btn-secondary">Log Match State</button>
+            </EditForm>
+        </div>
     </div>
-</div>
+}
 
 <div>
     <a href="/matches">Back to List</a>
 </div>
 
 @code {
+    private Match match = new()
+    {
+        MatchTime = DateTime.Today
+    };
 
-    [SupplyParameterFromForm]
-    public Match Match { get; set; } = new();
+    private List<Court> courts = [];
+    private List<Player> players = [];
+    private List<Scoreboard> scoreboards = [];
 
-    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            courts = await DB.Court.ToListAsync();
+            players = await DB.Player.ToListAsync();
+            scoreboards = await DB.Scoreboard.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void LogMatchState()
+    {
+        Console.WriteLine($"Current Match State: CourtId={match.CourtId}, Player1Id={match.Player1Id}, Player2Id={match.Player2Id}, ScoreboardId={match.ScoreboardId}, MatchTime={match.MatchTime}");
+    }
+
     public async Task AddMatch()
     {
-        DB.Match.Add(Match);
-        await DB.SaveChangesAsync();
-        NavigationManager.NavigateTo("/matches");
+        Console.WriteLine($"Submitting Match: CourtId={match.CourtId}, Player1Id={match.Player1Id}, Player2Id={match.Player2Id}, ScoreboardId={match.ScoreboardId}, MatchTime={match.MatchTime}");
+
+        if (match.CourtId == 0 || match.Player1Id == 0 || match.Player2Id == 0 || match.ScoreboardId == 0)
+        {
+            Console.WriteLine("Invalid form data - default values detected");
+            return;
+        }
+
+        if (match != null)
+        {
+            DB.Match.Add(match);
+            await DB.SaveChangesAsync();
+            NavigationManager.NavigateTo("/matches");
+        }
     }
 }
