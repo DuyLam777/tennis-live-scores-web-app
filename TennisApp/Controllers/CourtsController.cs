@@ -1,4 +1,3 @@
-// Controllers/CourtsController.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TennisApp.Data;
