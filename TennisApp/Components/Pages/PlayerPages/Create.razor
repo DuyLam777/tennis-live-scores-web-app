@@ -1,6 +1,7 @@
 @page "/players/create"
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager NavigationManager
 
 <PageTitle>Create</PageTitle>
@@ -37,7 +38,7 @@
             <!-- Gender -->
             <div class="mb-3">
                 <label for="gender" class="form-label">Gender:</label>
-                <InputSelect id="gender" @bind-Value="genderString" class="form-control">
+                <InputSelect id="gender" @bind-Value="GenderString" class="form-control" name="GenderString">
                     @foreach (var gender in Enum.GetValues<Gender>())
                     {
                         <option value="@gender">@gender</option>
@@ -58,37 +59,24 @@
     [SupplyParameterFromForm]
     public Player Player { get; set; } = new();
 
-    // Helper variables for binding non-string properties
-    private string? dateOfBirthString;
-    private string? genderString;
+    [SupplyParameterFromForm]
+    public string GenderString { get; set; } = Gender.Male.ToString();
 
     protected override void OnInitialized()
     {
-        // Initialize helper variables with default values
-        dateOfBirthString = DateTime.Now.ToString("yyyy-MM-dd");
-        genderString = Gender.Male.ToString();
+        // Initialize DateOfBirth with today's date if needed
+        Player.DateOfBirth = DateOnly.FromDateTime(DateTime.Now);
     }
 
     public async Task AddPlayer()
     {
-        // Parse helper variables into their respective types
-        if (DateOnly.TryParse(dateOfBirthString, out var parsedDateOfBirth))
-        {
-            Player.DateOfBirth = parsedDateOfBirth;
-        }
-        else
-        {
-            // Handle invalid date input (e.g., show an error message)
-            return;
-        }
-
-        if (Enum.TryParse<Gender>(genderString, out var parsedGender))
+        if (Enum.TryParse<Gender>(GenderString, out var parsedGender))
         {
             Player.gender = parsedGender;
         }
         else
         {
-            // Handle invalid gender input (e.g., show an error message)
+            // Handle invalid gender
             return;
         }
 

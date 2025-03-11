@@ -20,25 +20,28 @@ else
                 <DataAnnotationsValidator />
                 <ValidationSummary />
                 <input type="hidden" name="Player.Id" value="@Player.Id" />
+
                 <!-- Name -->
                 <div class="mb-3">
                     <label for="name" class="form-label">Name:</label>
                     <InputText id="name" @bind-Value="Player.Name" class="form-control" />
                     <ValidationMessage For="() => Player.Name" class="text-danger" />
                 </div>
+
                 <!-- Country -->
                 <div class="mb-3">
                     <label for="country" class="form-label">Country:</label>
                     <InputText id="country" @bind-Value="Player.Country" class="form-control" />
                     <ValidationMessage For="() => Player.Country" class="text-danger" />
                 </div>
-                <!-- DateOfBirth -->
+
                 <!-- DateOfBirth -->
                 <div class="mb-3">
                     <label for="dateofbirth" class="form-label">Date of Birth:</label>
                     <InputDate id="dateofbirth" @bind-Value="Player.DateOfBirth" class="form-control" />
                     <ValidationMessage For="() => Player.DateOfBirth" class="text-danger" />
                 </div>
+                
                 <!-- Gender -->
                 <div class="mb-3">
                     <label for="gender" class="form-label">Gender:</label>

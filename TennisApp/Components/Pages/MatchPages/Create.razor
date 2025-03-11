@@ -7,7 +7,6 @@
 <PageTitle>Create</PageTitle>
 
 <h1>Create</h1>
-
 <h4>Match</h4>
 <hr />
 
@@ -19,66 +18,71 @@ else
 {
     <div class="row">
         <div class="col-md-4">
-            <EditForm Model="@match" OnValidSubmit="AddMatch" FormName="create" Enhance>
+            <!-- Remove Model parameter, use EditContext instead -->
+            <EditForm EditContext="@_editContext" OnValidSubmit="AddMatch" FormName="create" Enhance>
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger" />
 
+                <!-- Court Dropdown -->
                 <div class="mb-3">
                     <label for="court" class="form-label">Court:</label>
-                    <InputSelect id="court" @bind-Value="match.CourtId" class="form-control">
+                    <InputSelect id="court" @bind-Value="courtIdString" class="form-control">
                         <option value="0">-- Select a Court --</option>
                         @foreach (var court in courts)
                         {
                             <option value="@court.Id">@court.Name</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => match.CourtId" class="text-danger" />
+                    <ValidationMessage For="() => Match.CourtId" class="text-danger" />
                 </div>
-
+                
+                <!-- Match Time -->
                 <div class="mb-3">
                     <label for="matchtime" class="form-label">Match Time:</label>
-                    <InputDate id="matchtime" @bind-Value="match.MatchTime" class="form-control" />
-                    <ValidationMessage For="() => match.MatchTime" class="text-danger" />
+                    <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" />
+                    <ValidationMessage For="() => Match.MatchTime" class="text-danger" />
                 </div>
 
+                <!-- Player 1 Dropdown -->
                 <div class="mb-3">
                     <label for="player1" class="form-label">Player 1:</label>
-                    <InputSelect id="player1" @bind-Value="match.Player1Id" class="form-control">
+                    <InputSelect id="player1" @bind-Value="player1IdString" class="form-control">
                         <option value="0">-- Select Player 1 --</option>
                         @foreach (var player in players)
                         {
                             <option value="@player.Id">@player.Name</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => match.Player1Id" class="text-danger" />
+                    <ValidationMessage For="() => Match.Player1Id" class="text-danger" />
                 </div>
 
+                <!-- Player 2 Dropdown -->
                 <div class="mb-3">
                     <label for="player2" class="form-label">Player 2:</label>
-                    <InputSelect id="player2" @bind-Value="match.Player2Id" class="form-control">
+                    <InputSelect id="player2" @bind-Value="player2IdString" class="form-control">
                         <option value="0">-- Select Player 2 --</option>
                         @foreach (var player in players)
                         {
                             <option value="@player.Id">@player.Name</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => match.Player2Id" class="text-danger" />
+                    <ValidationMessage For="() => Match.Player2Id" class="text-danger" />
                 </div>
 
+                <!-- Scoreboard Dropdown -->
                 <div class="mb-3">
                     <label for="scoreboard" class="form-label">Scoreboard:</label>
-                    <InputSelect id="scoreboard" @bind-Value="match.ScoreboardId" class="form-control">
+                    <InputSelect id="scoreboard" @bind-Value="scoreboardIdString" class="form-control">
                         <option value="0">-- Select a Scoreboard --</option>
                         @foreach (var scoreboard in scoreboards)
                         {
                             <option value="@scoreboard.Id">@scoreboard.Id</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => match.ScoreboardId" class="text-danger" />
+                    <ValidationMessage For="() => Match.ScoreboardId" class="text-danger" />
                 </div>
 
                 <button type="submit" class="btn btn-primary">Create</button>
-                <button type="button" @onclick="LogMatchState" class="btn btn-secondary">Log Match State</button>
             </EditForm>
         </div>
     </div>
@@ -89,16 +93,33 @@ else
 </div>
 
 @code {
-    private Match match = new()
-    {
-        MatchTime = DateTime.Today
-    };
+    [SupplyParameterFromForm]
+    public Match Match { get; set; } = new() { MatchTime = DateTime.UtcNow };
 
-    private List<Court> courts = [];
-    private List<Player> players = [];
-    private List<Scoreboard> scoreboards = [];
+    // Helper strings for dropdown parsing
+    [SupplyParameterFromForm]
+    public string courtIdString { get; set; } = "0";
+    
+    [SupplyParameterFromForm]
+    public string player1IdString { get; set; } = "0";
+    
+    [SupplyParameterFromForm]
+    public string player2IdString { get; set; } = "0";
+    
+    [SupplyParameterFromForm]
+    public string scoreboardIdString { get; set; } = "0";
 
+    private List<Court> courts = new();
+    private List<Player> players = new();
+    private List<Scoreboard> scoreboards = new();
     private bool isLoading = true;
+    private EditContext _editContext;
+
+    protected override void OnInitialized()
+    {
+        Match = new Match { MatchTime = DateTime.UtcNow };
+        _editContext = new EditContext(Match);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,26 +139,26 @@ else
         }
     }
 
-    private void LogMatchState()
-    {
-        Console.WriteLine($"Current Match State: CourtId={match.CourtId}, Player1Id={match.Player1Id}, Player2Id={match.Player2Id}, ScoreboardId={match.ScoreboardId}, MatchTime={match.MatchTime}");
-    }
-
     public async Task AddMatch()
     {
-        Console.WriteLine($"Submitting Match: CourtId={match.CourtId}, Player1Id={match.Player1Id}, Player2Id={match.Player2Id}, ScoreboardId={match.ScoreboardId}, MatchTime={match.MatchTime}");
+        // Parse dropdown values
+        Match.CourtId = int.Parse(courtIdString);
+        Match.Player1Id = int.Parse(player1IdString);
+        Match.Player2Id = int.Parse(player2IdString);
+        Match.ScoreboardId = int.Parse(scoreboardIdString);
 
-        if (match.CourtId == 0 || match.Player1Id == 0 || match.Player2Id == 0 || match.ScoreboardId == 0)
+        if (Match.CourtId == 0 || Match.Player1Id == 0 || 
+            Match.Player2Id == 0 || Match.ScoreboardId == 0)
         {
             Console.WriteLine("Invalid form data - default values detected");
             return;
         }
 
-        if (match != null)
-        {
-            DB.Match.Add(match);
-            await DB.SaveChangesAsync();
-            NavigationManager.NavigateTo("/matches");
-        }
+        // Ensure MatchTime is in UTC
+        Match.MatchTime = Match.MatchTime.ToUniversalTime();
+
+        DB.Match.Add(Match);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/matches");
     }
 }
