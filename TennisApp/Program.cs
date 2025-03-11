@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using TennisApp.Components;
 using TennisApp.Data;
+using TennisApp.WebSockets;
 
 // This is necessary for the physical android device to connect to the server from the MAUI app
 var builder = WebApplication.CreateBuilder(
@@ -39,6 +40,10 @@ builder.Services.AddResponseCompression(opts =>
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
 });
 
+// Register WebSocket services
+builder.Services.AddSingleton<WebSocketHandler>();
+builder.Services.AddHostedService<CourtAvailabilityService>();
+
 var app = builder.Build();
 
 // Use response compression
@@ -58,7 +63,7 @@ app.UseStaticFiles();
 app.UseAntiforgery();
 
 // Enable WebSockets
-app.UseWebSockets();
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromMinutes(2) });
 
 // Map WebSocket endpoint
 app.Map(
@@ -68,7 +73,8 @@ app.Map(
         if (context.WebSockets.IsWebSocketRequest)
         {
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await HandleWebSocketConnection(webSocket);
+            var handler = context.RequestServices.GetRequiredService<WebSocketHandler>();
+            await handler.HandleConnection(webSocket, context);
         }
         else
         {
@@ -78,38 +84,6 @@ app.Map(
 );
 
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-
-// WebSocket handler method (This will be moved to a separate class in the future)
-async Task HandleWebSocketConnection(WebSocket webSocket)
-{
-    var buffer = new byte[1024 * 4];
-    while (webSocket.State == WebSocketState.Open)
-    {
-        var result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
-        if (result.MessageType == WebSocketMessageType.Text)
-        {
-            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            Console.WriteLine($"Received: {message}");
-
-            // Echo the message back for now
-            await webSocket.SendAsync(
-                buffer[..result.Count],
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None
-            );
-        }
-        else if (result.MessageType == WebSocketMessageType.Close)
-        {
-            await webSocket.CloseAsync(
-                WebSocketCloseStatus.NormalClosure,
-                "Closing",
-                CancellationToken.None
-            );
-        }
-    }
-}
-
 app.MapControllers();
 
 // Ensure the database is dropped and recreated on startup

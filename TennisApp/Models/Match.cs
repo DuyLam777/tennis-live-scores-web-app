@@ -27,6 +27,7 @@ namespace TennisApp.Models
         // [Required(ErrorMessage = "Player 1 is required!")]
         // [Range(1, int.MaxValue, ErrorMessage = "Please select a valid player.")]
         public int Player1Id { get; set; }
+
         // Navigation property for Player2
         public Player? Player2 { get; set; }
 

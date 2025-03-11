@@ -1,24 +1,129 @@
 @page "/courts"
 @using Microsoft.AspNetCore.Components.QuickGrid
-@inject TennisApp.Data.TennisAppContext DB
+@using TennisApp.WebSockets
 @using TennisApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject TennisApp.Data.TennisAppContext DB
+@inject WebSocketHandler WebSocketHandler
+@implements IDisposable
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Courts</PageTitle>
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Courts</h1>
+    <div>
+        <a href="courts/create" class="btn btn-primary me-2">Create New</a>
+        <button class="btn btn-outline-secondary" @onclick="RefreshData">
+            <i class="oi oi-reload"></i> Refresh
+        </button>
+    </div>
+</div>
 
-<p>
-    <a href="courts/create">Create New</a>
-</p>
+@if (showAlert)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <strong>Real-time updates enabled!</strong> Court status changes are automatically broadcast to mobile apps.
+        <button type="button" class="btn-close" @onclick="() => showAlert = false"></button>
+    </div>
+}
 
-<QuickGrid Class="table" Items="DB.Court">
-    <PropertyColumn Property="court => court.Name" />
-    <PropertyColumn Property="court => court.IsOccupied" />
-    <PropertyColumn Property="court => court.IsIndoor" />
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Court Availability</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var court in courts)
+                    {
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100 @(court.IsOccupied ? "border-danger" : "border-success")">
+                                <div
+                                    class="card-header @(court.IsOccupied ? "bg-danger text-white" : "bg-success text-white")">
+                                    <h5 class="mb-0">@court.Name</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Status:</strong> @(court.IsOccupied ? "In Use" : "Available")</p>
+                                    <p><strong>Type:</strong> @(court.IsIndoor ? "Indoor" : "Outdoor")</p>
+                                </div>
+                                <div class="card-footer">
+                                    <button
+                                        class="btn @(court.IsOccupied ? "btn-outline-success" : "btn-outline-danger") btn-sm w-100"
+                                        @onclick="() => ToggleCourtStatus(court)">
+                                        @(court.IsOccupied ? "Mark Available" : "Mark In Use")
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <TemplateColumn Context="court">
-        <a href="@($"courts/edit?id={court.Id}")">Edit</a> |
-        <a href="@($"courts/details?id={court.Id}")">Details</a> |
-        <a href="@($"courts/delete?id={court.Id}")">Delete</a>
+<QuickGrid Items="@(courts.AsQueryable())" Class="table table-striped">
+    <PropertyColumn Property="@(court => court.Name)" Title="Court Name" Sortable="true" />
+    <TemplateColumn Title="Status">
+        <span class="badge @(context.IsOccupied ? "bg-danger" : "bg-success")">
+            @(context.IsOccupied ? "In Use" : "Available")
+        </span>
+    </TemplateColumn>
+    <PropertyColumn Property="@(court => court.IsIndoor ? "Indoor" : "Outdoor")" Title="Type" />
+    <TemplateColumn Title="Actions">
+        <div class="btn-group">
+            <a href="@($"courts/edit?id={context.Id}")" class="btn btn-sm btn-primary">Edit</a>
+            <a href="@($"courts/details?id={context.Id}")" class="btn btn-sm btn-info">Details</a>
+            <a href="@($"courts/delete?id={context.Id}")" class="btn btn-sm btn-danger">Delete</a>
+        </div>
     </TemplateColumn>
 </QuickGrid>
+
+@code {
+    private List<Court> courts = new();
+    private bool showAlert = true;
+    private System.Threading.Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourtsAsync();
+
+        // Set up a timer to refresh the data every 30 seconds
+        refreshTimer = new System.Threading.Timer(
+        async _ =>
+        {
+            await LoadCourtsAsync();
+            await InvokeAsync(StateHasChanged);
+        },
+        null,
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(30)
+        );
+    }
+
+    private async Task LoadCourtsAsync()
+    {
+        courts = await DB.Court.AsNoTracking().ToListAsync();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadCourtsAsync();
+    }
+
+    private async Task ToggleCourtStatus(Court court)
+    {
+        court.IsOccupied = !court.IsOccupied;
+        DB.Update(court);
+        await DB.SaveChangesAsync();
+
+        // Broadcast the court availability update via WebSocket
+        await WebSocketHandler.BroadcastCourtAvailabilityAsync();
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}
