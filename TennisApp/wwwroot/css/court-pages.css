@@ -1,0 +1,227 @@
+/* Force dark colors on the entire page */
+.page-container {
+    background-color: #181825 !important;
+    color: #cdd6f4 !important;
+    min-height: 100vh !important;
+    padding: 1.5rem !important;
+}
+
+/* Make sure all text is light colored */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+div,
+label,
+th,
+td {
+    color: #cdd6f4 !important;
+}
+
+/* Force dark colors on court cards with hover effect */
+.court-card {
+    background-color: #1e1e2e !important;
+    border: none !important;
+    color: #cdd6f4 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.court-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.court-card h4 {
+    color: #cdd6f4 !important;
+}
+
+.court-card .card-body {
+    background-color: #1e1e2e !important;
+    padding: 1.5rem !important;
+    color: #cdd6f4 !important;
+}
+
+.card-header {
+    padding: 1rem !important;
+    font-weight: bold !important;
+    color: #cdd6f4 !important;
+}
+
+.court-header-available,
+.court-header-occupied {
+    background-color: #313244 !important;
+}
+
+.court-available {
+    border-left: 5px solid #a6e3a1 !important;
+}
+
+.court-occupied {
+    border-left: 5px solid #f38ba8 !important;
+}
+
+/* Badge styling */
+.badge-available {
+    background-color: #a6e3a1 !important;
+    color: #181825 !important;
+}
+
+.badge-occupied {
+    background-color: #f38ba8 !important;
+    color: #181825 !important;
+}
+
+/* Force dark background on the dashboard sections */
+.dashboard-section {
+    background-color: #313244 !important;
+    color: #cdd6f4 !important;
+    border-radius: 0.75rem !important;
+    padding: 1.5rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* Make sure the court grid is properly spaced */
+.court-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 1.5rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* Style for court info */
+.court-info {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-bottom: 1rem !important;
+}
+
+.court-type {
+    display: inline-block !important;
+    padding: 0.25rem 0.75rem !important;
+    border-radius: 1rem !important;
+    background-color: #313244 !important;
+    font-size: 0.9rem !important;
+    color: #cdd6f4 !important;
+}
+
+/* Status indicators */
+.court-status {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.status-indicator {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    margin-right: 0.5rem !important;
+}
+
+.status-available {
+    background-color: #a6e3a1 !important;
+}
+
+.status-occupied {
+    background-color: #f38ba8 !important;
+}
+
+/* Make sure the table container is styled correctly */
+.table-container {
+    background-color: #1e1e2e !important;
+    border-radius: 0.75rem !important;
+    padding: 1.5rem !important;
+    overflow: auto !important;
+}
+
+/* QuickGrid styling */
+::deep .quick-grid {
+    color: #cdd6f4 !important;
+    background-color: #1e1e2e !important;
+}
+
+::deep .quick-grid th {
+    background-color: #313244 !important;
+    color: #cdd6f4 !important;
+    border-bottom: 1px solid #45475a !important;
+}
+
+::deep .quick-grid td {
+    color: #cdd6f4 !important;
+    border-bottom: 1px solid #313244 !important;
+}
+
+/* Button styling */
+.btn-primary {
+    background-color: #89b4fa !important;
+    border-color: #89b4fa !important;
+    color: #181825 !important;
+}
+
+.btn-secondary {
+    background-color: #cba6f7 !important;
+    border-color: #cba6f7 !important;
+    color: #181825 !important;
+}
+
+.btn-success {
+    background-color: #a6e3a1 !important;
+    border-color: #a6e3a1 !important;
+    color: #181825 !important;
+}
+
+.btn-danger {
+    background-color: #f38ba8 !important;
+    border-color: #f38ba8 !important;
+    color: #181825 !important;
+}
+
+/* Override any Bootstrap background classes that might be conflicting */
+.bg-white,
+.bg-light {
+    background-color: #1e1e2e !important;
+}
+
+.bg-dark {
+    background-color: #181825 !important;
+}
+
+/* Toast styling */
+.toast-container {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 1000 !important;
+}
+
+.toast {
+    background-color: #313244 !important;
+    color: #cdd6f4 !important;
+    padding: 1rem !important;
+    border-radius: 0.5rem !important;
+    margin-bottom: 1rem !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    max-width: 300px !important;
+}
+
+.toast-success {
+    border-left: 4px solid #a6e3a1 !important;
+}
+
+.toast-error {
+    border-left: 4px solid #f38ba8 !important;
+}
+
+/* Fix for action buttons */
+.action-button {
+    margin-right: 0.5rem !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 1rem !important;
+}

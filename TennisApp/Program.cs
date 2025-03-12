@@ -23,15 +23,17 @@ builder.WebHost.UseUrls("http://0.0.0.0:5020");
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-
 builder.Services.AddControllers();
 
 // Register the DbContext with PostgreSQL
 builder.Services.AddDbContext<TennisAppContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
-
 builder.Services.AddQuickGridEntityFrameworkAdapter();
+
+// Register HttpClient for components
+builder.Services.AddHttpClient();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5020") });
 
 // This is the SignalR service registration
 builder.Services.AddSignalR();
@@ -42,12 +44,8 @@ builder.Services.AddResponseCompression(opts =>
 
 // Register WebSocket services
 builder.Services.AddSingleton<WebSocketHandler>();
-builder.Services.AddHostedService<CourtAvailabilityService>();
-
+builder.Services.AddSingleton<CourtAvailabilityService>();
 var app = builder.Build();
-
-// Use response compression
-app.UseResponseCompression();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -56,7 +54,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-
 app.UseStaticFiles();
 
 // This could cause issues with the create pages. If it does, remove it since it's not necessary for the project.
@@ -82,7 +79,6 @@ app.Map(
         }
     }
 );
-
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
 
@@ -116,5 +112,4 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
     }
 }
-
 app.Run();

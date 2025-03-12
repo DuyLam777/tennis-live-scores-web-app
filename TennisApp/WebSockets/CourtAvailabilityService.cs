@@ -4,12 +4,11 @@ using TennisApp.Models;
 
 namespace TennisApp.WebSockets
 {
-    public class CourtAvailabilityService : BackgroundService
+    public class CourtAvailabilityService
     {
         private readonly ILogger<CourtAvailabilityService> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly WebSocketHandler _webSocketHandler;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(30);
 
         public CourtAvailabilityService(
             ILogger<CourtAvailabilityService> logger,
@@ -22,34 +21,20 @@ namespace TennisApp.WebSockets
             _webSocketHandler = webSocketHandler;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task BroadcastCourtAvailabilityChangesAsync()
         {
-            _logger.LogInformation("Court Availability Service is starting.");
-
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await CheckAndBroadcastCourtChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error checking court availability changes");
-                }
-
-                await Task.Delay(_checkInterval, stoppingToken);
+                await _webSocketHandler.BroadcastCourtAvailabilityAsync();
+                _logger.LogInformation(
+                    "Court availability broadcast completed at {time}",
+                    DateTime.Now
+                );
             }
-
-            _logger.LogInformation("Court Availability Service is stopping.");
-        }
-
-        private async Task CheckAndBroadcastCourtChangesAsync()
-        {
-            await _webSocketHandler.BroadcastCourtAvailabilityAsync();
-            _logger.LogInformation(
-                "Court availability broadcast completed at {time}",
-                DateTime.Now
-            );
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting court availability changes");
+            }
         }
     }
 }
