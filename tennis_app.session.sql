@@ -1,0 +1,1 @@
+UPDATE "Court" SET "IsOccupied" = TRUE WHERE "Id" = 1;

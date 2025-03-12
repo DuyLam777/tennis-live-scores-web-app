@@ -2,8 +2,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-
 namespace TennisApp.Models;
+
 public class Court
 {
     public int Id { get; set; }

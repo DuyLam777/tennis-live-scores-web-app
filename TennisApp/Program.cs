@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using TennisApp.Components;
 using TennisApp.Data;
+using TennisApp.WebSockets;
 
 // This is necessary for the physical android device to connect to the server from the MAUI app
 var builder = WebApplication.CreateBuilder(
@@ -22,15 +23,17 @@ builder.WebHost.UseUrls("http://0.0.0.0:5020");
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-
 builder.Services.AddControllers();
 
 // Register the DbContext with PostgreSQL
 builder.Services.AddDbContext<TennisAppContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
-
 builder.Services.AddQuickGridEntityFrameworkAdapter();
+
+// Register HttpClient for components
+builder.Services.AddHttpClient();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5020") });
 
 // This is the SignalR service registration
 builder.Services.AddSignalR();
@@ -39,10 +42,10 @@ builder.Services.AddResponseCompression(opts =>
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
 });
 
+// Register WebSocket services
+builder.Services.AddSingleton<WebSocketHandler>();
+builder.Services.AddSingleton<CourtAvailabilityService>();
 var app = builder.Build();
-
-// Use response compression
-app.UseResponseCompression();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -51,14 +54,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-
 app.UseStaticFiles();
 
 // This could cause issues with the create pages. If it does, remove it since it's not necessary for the project.
 app.UseAntiforgery();
 
 // Enable WebSockets
-app.UseWebSockets();
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromMinutes(2) });
 
 // Map WebSocket endpoint
 app.Map(
@@ -68,7 +70,8 @@ app.Map(
         if (context.WebSockets.IsWebSocketRequest)
         {
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await HandleWebSocketConnection(webSocket);
+            var handler = context.RequestServices.GetRequiredService<WebSocketHandler>();
+            await handler.HandleConnection(webSocket, context);
         }
         else
         {
@@ -76,40 +79,7 @@ app.Map(
         }
     }
 );
-
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-
-// WebSocket handler method (This will be moved to a separate class in the future)
-async Task HandleWebSocketConnection(WebSocket webSocket)
-{
-    var buffer = new byte[1024 * 4];
-    while (webSocket.State == WebSocketState.Open)
-    {
-        var result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
-        if (result.MessageType == WebSocketMessageType.Text)
-        {
-            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            Console.WriteLine($"Received: {message}");
-
-            // Echo the message back for now
-            await webSocket.SendAsync(
-                buffer[..result.Count],
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None
-            );
-        }
-        else if (result.MessageType == WebSocketMessageType.Close)
-        {
-            await webSocket.CloseAsync(
-                WebSocketCloseStatus.NormalClosure,
-                "Closing",
-                CancellationToken.None
-            );
-        }
-    }
-}
-
 app.MapControllers();
 
 // Ensure the database is dropped and recreated on startup
@@ -142,5 +112,4 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
     }
 }
-
 app.Run();

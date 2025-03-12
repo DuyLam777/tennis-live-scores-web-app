@@ -33,7 +33,7 @@ namespace TennisApp.Models
         // Timestamps for start and end of the set
         [DataType(DataType.DateTime)]
         public DateTime? StartTime { get; set; }
-        
+
         [DataType(DataType.DateTime)]
         public DateTime? EndTime { get; set; }
 

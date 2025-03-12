@@ -1,0 +1,224 @@
+/* Override Bootstrap's core colors */
+:root {
+    --bs-primary: #89b4fa !important;
+    --bs-secondary: #cba6f7 !important;
+    --bs-success: #a6e3a1 !important;
+    --bs-info: #74c7ec !important;
+    --bs-warning: #f9e2af !important;
+    --bs-danger: #f38ba8 !important;
+    --bs-light: #313244 !important;
+    --bs-dark: #1e1e2e !important;
+
+    --bs-primary-rgb: 137, 180, 250 !important;
+    --bs-secondary-rgb: 203, 166, 247 !important;
+    --bs-success-rgb: 166, 227, 161 !important;
+    --bs-info-rgb: 116, 199, 236 !important;
+    --bs-warning-rgb: 249, 226, 175 !important;
+    --bs-danger-rgb: 243, 139, 168 !important;
+    --bs-light-rgb: 49, 50, 68 !important;
+    --bs-dark-rgb: 30, 30, 46 !important;
+
+    --bs-body-color: #cdd6f4 !important;
+    --bs-body-bg: #181825 !important;
+}
+
+/* Force dark background on body */
+body,
+html {
+    background-color: #181825 !important;
+    color: #cdd6f4 !important;
+}
+
+/* Force text colors on all elements */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.text-body,
+span,
+div,
+label,
+th,
+td {
+    color: #cdd6f4 !important;
+}
+
+/* Override bootstrap core components */
+.card {
+    background-color: #1e1e2e !important;
+    border-color: #313244 !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.card-header {
+    background-color: #313244 !important;
+    border-bottom-color: #45475a !important;
+    color: #cdd6f4 !important;
+}
+
+.card-body {
+    background-color: #1e1e2e !important;
+    color: #cdd6f4 !important;
+}
+
+.card-title,
+.card-text {
+    color: #cdd6f4 !important;
+}
+
+.btn-primary {
+    background-color: #89b4fa !important;
+    border-color: #89b4fa !important;
+    color: #181825 !important;
+}
+
+.btn-secondary {
+    background-color: #cba6f7 !important;
+    border-color: #cba6f7 !important;
+    color: #181825 !important;
+}
+
+.btn-success {
+    background-color: #a6e3a1 !important;
+    border-color: #a6e3a1 !important;
+    color: #181825 !important;
+}
+
+.btn-danger {
+    background-color: #f38ba8 !important;
+    border-color: #f38ba8 !important;
+    color: #181825 !important;
+}
+
+/* Navbar/Sidebar specific overrides */
+.sidebar {
+    background-image: linear-gradient(180deg, #1e1e2e 0%, #313244 70%) !important;
+    background-color: #1e1e2e !important;
+}
+
+.navbar-toggler {
+    background-color: rgba(205, 214, 244, 0.1) !important;
+    border-color: rgba(205, 214, 244, 0.1) !important;
+}
+
+/* Override Bootstrap's dropdown components */
+.dropdown-menu {
+    background-color: #1e1e2e !important;
+    border-color: #313244 !important;
+}
+
+.dropdown-item {
+    color: #cdd6f4 !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #313244 !important;
+    color: #89b4fa !important;
+}
+
+/* Fix for SVG icons in sidebar */
+.nav-link svg,
+.navbar-brand svg {
+    fill: #cdd6f4 !important;
+}
+
+/* Court card hover effect specifically for the courts page */
+.court-card {
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.court-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Form elements */
+.form-control,
+.form-select {
+    background-color: #1e1e2e !important;
+    border-color: #313244 !important;
+    color: #cdd6f4 !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #1e1e2e !important;
+    border-color: #89b4fa !important;
+    color: #cdd6f4 !important;
+}
+
+.form-control::placeholder {
+    color: #6c7086 !important;
+}
+
+.form-label {
+    color: #cdd6f4 !important;
+}
+
+/* Links */
+a:not(.btn):not(.dropdown-item) {
+    color: #89b4fa !important;
+}
+
+a:hover:not(.btn):not(.dropdown-item) {
+    color: #74c7ec !important;
+}
+
+/* Table styles */
+.table {
+    color: #cdd6f4 !important;
+}
+
+.table th {
+    background-color: #313244 !important;
+    color: #cdd6f4 !important;
+}
+
+.table td {
+    color: #cdd6f4 !important;
+}
+
+/* Ensure text in all components has proper contrast */
+.text-muted {
+    color: #9aa5ce !important;
+}
+
+.text-dark {
+    color: #cdd6f4 !important;
+}
+
+/* Modal styles */
+.modal-content {
+    background-color: #1e1e2e !important;
+    color: #cdd6f4 !important;
+}
+
+.modal-header {
+    background-color: #313244 !important;
+    border-bottom-color: #45475a !important;
+}
+
+.modal-footer {
+    background-color: #1e1e2e !important;
+    border-top-color: #45475a !important;
+}
+
+/* Make sure page background remains dark */
+.page {
+    background-color: #181825 !important;
+}
+
+main,
+article {
+    background-color: #181825 !important;
+    color: #cdd6f4 !important;
+}
