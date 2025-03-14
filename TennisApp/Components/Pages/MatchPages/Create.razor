@@ -1,10 +1,12 @@
 @page "/matches/create"
-@inject TennisApp.Data.TennisAppContext DB
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@inject NavigationManager NavigationManager
 @using TennisApp.Models
 @using Microsoft.EntityFrameworkCore
-@inject NavigationManager NavigationManager
 
-<PageTitle>Create</PageTitle>
+@rendermode InteractiveServer
+
+<PageTitle>Create Match</PageTitle>
 
 <h1>Create</h1>
 <h4>Match</h4>
@@ -14,124 +16,145 @@
 {
     <p>Loading...</p>
 }
+else if (matchCreated)
+{
+    <div class="alert alert-success">
+        <p>Match created successfully!</p>
+        <a href="/matches" class="btn btn-primary">Back to Matches</a>
+    </div>
+}
 else
 {
     <div class="row">
         <div class="col-md-4">
-            <!-- Remove Model parameter, use EditContext instead -->
-            <EditForm EditContext="@_editContext" OnValidSubmit="AddMatch" FormName="create" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary class="text-danger" />
+            <form @onsubmit="AddMatch">
+                @if (validationErrors.Any())
+                {
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
 
                 <!-- Court Dropdown -->
                 <div class="mb-3">
                     <label for="court" class="form-label">Court:</label>
-                    <InputSelect id="court" @bind-Value="courtIdString" class="form-control">
+                    <select id="court" @bind="Match.CourtId" class="form-control">
                         <option value="0">-- Select a Court --</option>
                         @foreach (var court in courts)
                         {
                             <option value="@court.Id">@court.Name</option>
                         }
-                    </InputSelect>
-                    <ValidationMessage For="() => Match.CourtId" class="text-danger" />
+                    </select>
                 </div>
-                
-                <!-- Match Time -->
+
+                <!-- Match Date and Time -->
+                <div class="mb-3">
+                    <label for="matchdate" class="form-label">Match Date:</label>
+                    <input id="matchdate" type="date" class="form-control" value="@_dateString"
+                        @onchange="@(e => _dateString = e.Value?.ToString() ?? _dateString)" />
+                </div>
+
                 <div class="mb-3">
                     <label for="matchtime" class="form-label">Match Time:</label>
-                    <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" />
-                    <ValidationMessage For="() => Match.MatchTime" class="text-danger" />
+                    <input id="matchtime" type="time" class="form-control" value="@_timeString"
+                        @onchange="@(e => _timeString = e.Value?.ToString() ?? _timeString)" />
                 </div>
 
                 <!-- Player 1 Dropdown -->
                 <div class="mb-3">
                     <label for="player1" class="form-label">Player 1:</label>
-                    <InputSelect id="player1" @bind-Value="player1IdString" class="form-control">
+                    <select id="player1" @bind="Match.Player1Id" class="form-control">
                         <option value="0">-- Select Player 1 --</option>
                         @foreach (var player in players)
                         {
                             <option value="@player.Id">@player.Name</option>
                         }
-                    </InputSelect>
-                    <ValidationMessage For="() => Match.Player1Id" class="text-danger" />
+                    </select>
                 </div>
 
                 <!-- Player 2 Dropdown -->
                 <div class="mb-3">
                     <label for="player2" class="form-label">Player 2:</label>
-                    <InputSelect id="player2" @bind-Value="player2IdString" class="form-control">
+                    <select id="player2" @bind="Match.Player2Id" class="form-control">
                         <option value="0">-- Select Player 2 --</option>
                         @foreach (var player in players)
                         {
                             <option value="@player.Id">@player.Name</option>
                         }
-                    </InputSelect>
-                    <ValidationMessage For="() => Match.Player2Id" class="text-danger" />
+                    </select>
                 </div>
 
                 <!-- Scoreboard Dropdown -->
                 <div class="mb-3">
                     <label for="scoreboard" class="form-label">Scoreboard:</label>
-                    <InputSelect id="scoreboard" @bind-Value="scoreboardIdString" class="form-control">
+                    <select id="scoreboard" @bind="Match.ScoreboardId" class="form-control">
                         <option value="0">-- Select a Scoreboard --</option>
                         @foreach (var scoreboard in scoreboards)
                         {
                             <option value="@scoreboard.Id">@scoreboard.Id</option>
                         }
-                    </InputSelect>
-                    <ValidationMessage For="() => Match.ScoreboardId" class="text-danger" />
+                    </select>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Create</button>
-            </EditForm>
+                <a href="/matches" class="btn btn-secondary">Cancel</a>
+            </form>
         </div>
     </div>
 }
 
-<div>
-    <a href="/matches">Back to List</a>
-</div>
-
 @code {
-    [SupplyParameterFromForm]
-    public Match Match { get; set; } = new() { MatchTime = DateTime.UtcNow };
-
-    // Helper strings for dropdown parsing
-    [SupplyParameterFromForm]
-    public string courtIdString { get; set; } = "0";
-    
-    [SupplyParameterFromForm]
-    public string player1IdString { get; set; } = "0";
-    
-    [SupplyParameterFromForm]
-    public string player2IdString { get; set; } = "0";
-    
-    [SupplyParameterFromForm]
-    public string scoreboardIdString { get; set; } = "0";
+    // Initialize the Match property with default values
+    private Match Match { get; set; } = new Match();
 
     private List<Court> courts = new();
     private List<Player> players = new();
     private List<Scoreboard> scoreboards = new();
     private bool isLoading = true;
-    private EditContext _editContext;
+    private bool matchCreated = false;
+    private List<string> validationErrors = new();
 
-    protected override void OnInitialized()
-    {
-        Match = new Match { MatchTime = DateTime.UtcNow };
-        _editContext = new EditContext(Match);
-    }
+    // Simple string properties for date and time
+    private string _dateString = DateTime.Now.ToString("yyyy-MM-dd");
+    private string _timeString = DateTime.Now.ToString("HH:mm");
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            courts = await DB.Court.ToListAsync();
-            players = await DB.Player.ToListAsync();
-            scoreboards = await DB.Scoreboard.ToListAsync();
+            // Load each set of data sequentially with separate contexts
+            await LoadCourtsAsync();
+            await LoadPlayersAsync();
+            await LoadScoreboardsAsync();
+
+            // Set a default court if available
+            if (courts.Any())
+            {
+                Match.CourtId = courts.First().Id;
+            }
+
+            // Set default players if available
+            if (players.Count >= 2)
+            {
+                Match.Player1Id = players[0].Id;
+                Match.Player2Id = players[1].Id;
+            }
+
+            // Set a default scoreboard if available
+            if (scoreboards.Any())
+            {
+                Match.ScoreboardId = scoreboards.First().Id;
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading data: {ex.Message}");
+            validationErrors.Add($"Error loading data: {ex.Message}");
         }
         finally
         {
@@ -139,26 +162,104 @@ else
         }
     }
 
-    public async Task AddMatch()
+    private async Task LoadCourtsAsync()
     {
-        // Parse dropdown values
-        Match.CourtId = int.Parse(courtIdString);
-        Match.Player1Id = int.Parse(player1IdString);
-        Match.Player2Id = int.Parse(player2IdString);
-        Match.ScoreboardId = int.Parse(scoreboardIdString);
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        courts = await context.Court.ToListAsync();
+    }
 
-        if (Match.CourtId == 0 || Match.Player1Id == 0 || 
-            Match.Player2Id == 0 || Match.ScoreboardId == 0)
+    private async Task LoadPlayersAsync()
+    {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        players = await context.Player.ToListAsync();
+    }
+
+    private async Task LoadScoreboardsAsync()
+    {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        scoreboards = await context.Scoreboard.ToListAsync();
+    }
+
+    private bool ValidateModel()
+    {
+        validationErrors.Clear();
+
+        // Validate Court
+        if (Match.CourtId <= 0 || !courts.Any(c => c.Id == Match.CourtId))
         {
-            Console.WriteLine("Invalid form data - default values detected");
+            validationErrors.Add("Please select a valid court");
+            return false;
+        }
+
+        // Validate Player1
+        if (Match.Player1Id <= 0 || !players.Any(p => p.Id == Match.Player1Id))
+        {
+            validationErrors.Add("Please select a valid player for Player 1");
+            return false;
+        }
+
+        // Validate Player2
+        if (Match.Player2Id <= 0 || !players.Any(p => p.Id == Match.Player2Id))
+        {
+            validationErrors.Add("Please select a valid player for Player 2");
+            return false;
+        }
+
+        // Validate Scoreboard
+        if (Match.ScoreboardId <= 0 || !scoreboards.Any(s => s.Id == Match.ScoreboardId))
+        {
+            validationErrors.Add("Please select a valid scoreboard");
+            return false;
+        }
+
+        // Validate date/time
+        if (string.IsNullOrEmpty(_dateString) || string.IsNullOrEmpty(_timeString))
+        {
+            validationErrors.Add("Please enter both date and time");
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task AddMatch()
+    {
+        if (!ValidateModel())
+        {
             return;
         }
 
-        // Ensure MatchTime is in UTC
-        Match.MatchTime = Match.MatchTime.ToUniversalTime();
+        try
+        {
+            // Create a DateTime directly from the string inputs
+            string combinedDateTimeStr = $"{_dateString} {_timeString}";
 
-        DB.Match.Add(Match);
-        await DB.SaveChangesAsync();
-        NavigationManager.NavigateTo("/matches");
+            if (DateTime.TryParse(combinedDateTimeStr, out DateTime parsedDateTime))
+            {
+                // Simply mark the parsed DateTime as UTC without conversion
+                // This preserves the exact hours and minutes entered by the user
+                Match.MatchTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc);
+
+                Console.WriteLine($"Input date/time: {combinedDateTimeStr}");
+                Console.WriteLine($"Parsed as: {parsedDateTime}");
+                Console.WriteLine($"Saved as UTC: {Match.MatchTime}");
+            }
+            else
+            {
+                validationErrors.Add($"Could not parse date and time: {combinedDateTimeStr}");
+                return;
+            }
+
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            context.Match.Add(Match);
+            await context.SaveChangesAsync();
+
+            matchCreated = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating match: {ex.Message}");
+            validationErrors.Add($"Error saving match: {ex.Message}");
+        }
     }
 }

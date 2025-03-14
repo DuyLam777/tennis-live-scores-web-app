@@ -11,8 +11,10 @@ connection between the devices/applications (differences between blazor and mvc)
     - research blazor architecture further (render modes specifically)
     - Move the connection up the priority list
 
+Add password to a match/tournament so that it can be accessed later
+Good story telling about our artice
 
-Here is the curl commands:
+Here are the curl commands:
 ### Create match
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{

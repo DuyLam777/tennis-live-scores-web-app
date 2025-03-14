@@ -3,85 +3,165 @@
 @using TennisApp.Models
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
 <PageTitle>Create</PageTitle>
+
 <h1>Create</h1>
 <h4>Player</h4>
 <hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Player" OnValidSubmit="AddPlayer" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
 
-            <!-- Name -->
-            <div class="mb-3">
-                <label for="name" class="form-label">Name:</label>
-                <InputText id="name" @bind-Value="Player.Name" class="form-control" />
-                <ValidationMessage For="() => Player.Name" class="text-danger" />
-            </div>
-
-            <!-- Country -->
-            <div class="mb-3">
-                <label for="country" class="form-label">Country:</label>
-                <InputText id="country" @bind-Value="Player.Country" class="form-control" />
-                <ValidationMessage For="() => Player.Country" class="text-danger" />
-            </div>
-
-            <!-- DateOfBirth -->
-            <div class="mb-3">
-                <label for="dateofbirth" class="form-label">DateOfBirth:</label>
-                <InputDate id="dateofbirth" @bind-Value="Player.DateOfBirth" class="form-control" />
-                <ValidationMessage For="() => Player.DateOfBirth" class="text-danger" />
-            </div>
-
-            <!-- Gender -->
-            <div class="mb-3">
-                <label for="gender" class="form-label">Gender:</label>
-                <InputSelect id="gender" @bind-Value="GenderString" class="form-control" name="GenderString">
-                    @foreach (var gender in Enum.GetValues<Gender>())
-                    {
-                        <option value="@gender">@gender</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => Player.gender" class="text-danger" />
-            </div>
-
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
+@if (playerCreated)
+{
+    <div class="alert alert-success">
+        <p>Player created successfully!</p>
+        <a href="/players" class="btn btn-primary">Back to Players</a>
     </div>
-</div>
-<div>
-    <a href="/players">Back to List</a>
-</div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <form @onsubmit="AddPlayer">
+                @if (validationErrors.Any())
+                {
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                
+                <!-- Name -->
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <input id="name" @bind="Player.Name" class="form-control" />
+                </div>
+                
+                <!-- Country -->
+                <div class="mb-3">
+                    <label for="country" class="form-label">Country:</label>
+                    <input id="country" @bind="Player.Country" class="form-control" />
+                </div>
+                
+                <!-- DateOfBirth -->
+                <div class="mb-3">
+                    <label for="dateofbirth" class="form-label">Date of Birth:</label>
+                    <input id="dateofbirth" type="date" class="form-control" 
+                        value="@_dateOfBirthString" 
+                        @onchange="@(e => _dateOfBirthString = e.Value?.ToString() ?? DateTime.Now.ToString("yyyy-MM-dd"))" />
+                </div>
+                
+                <!-- Gender -->
+                <div class="mb-3">
+                    <label for="gender" class="form-label">Gender:</label>
+                    <select id="gender" @bind="GenderString" class="form-control">
+                        @foreach (var gender in Enum.GetValues<Gender>())
+                        {
+                            <option value="@gender">@gender</option>
+                        }
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a href="/players" class="btn btn-secondary">Back to List</a>
+            </form>
+        </div>
+    </div>
+}
 
 @code {
-    [SupplyParameterFromForm]
     public Player Player { get; set; } = new();
-
-    [SupplyParameterFromForm]
     public string GenderString { get; set; } = Gender.Male.ToString();
-
+    private bool playerCreated = false;
+    private List<string> validationErrors = new();
+    
+    // Use a string for date binding
+    private string _dateOfBirthString = DateTime.Now.ToString("yyyy-MM-dd");
+    
     protected override void OnInitialized()
     {
-        // Initialize DateOfBirth with today's date if needed
-        Player.DateOfBirth = DateOnly.FromDateTime(DateTime.Now);
+        // Initialize date string with today's date
+        _dateOfBirthString = DateTime.Now.ToString("yyyy-MM-dd");
     }
-
+    
+    private bool ValidateModel()
+    {
+        validationErrors.Clear();
+        
+        if (string.IsNullOrWhiteSpace(Player.Name))
+        {
+            validationErrors.Add("Name is required");
+            return false;
+        }
+        
+        if (string.IsNullOrWhiteSpace(Player.Country))
+        {
+            validationErrors.Add("Country is required");
+            return false;
+        }
+        
+        if (string.IsNullOrWhiteSpace(_dateOfBirthString))
+        {
+            validationErrors.Add("Date of Birth is required");
+            return false;
+        }
+        
+        return true;
+    }
+    
     public async Task AddPlayer()
     {
-        if (Enum.TryParse<Gender>(GenderString, out var parsedGender))
+        await Task.Yield();
+        
+        if (!ValidateModel())
         {
-            Player.gender = parsedGender;
-        }
-        else
-        {
-            // Handle invalid gender
             return;
         }
-
-        DB.Player.Add(Player);
-        await DB.SaveChangesAsync();
-        NavigationManager.NavigateTo("/players");
+        
+        try
+        {
+            // Parse date string
+            if (DateTime.TryParse(_dateOfBirthString, out DateTime parsedDate))
+            {
+                // Convert to DateOnly for Player
+                Player.DateOfBirth = DateOnly.FromDateTime(parsedDate);
+                
+                Console.WriteLine($"Date string: {_dateOfBirthString}");
+                Console.WriteLine($"Parsed date: {parsedDate}");
+                Console.WriteLine($"DateOnly: {Player.DateOfBirth}");
+            }
+            else
+            {
+                validationErrors.Add($"Invalid date format: {_dateOfBirthString}");
+                return;
+            }
+            
+            // Set gender from string
+            if (Enum.TryParse<Gender>(GenderString, out var parsedGender))
+            {
+                Player.gender = parsedGender;
+            }
+            else
+            {
+                validationErrors.Add($"Invalid gender value: {GenderString}");
+                return;
+            }
+            
+            // Save player
+            DB.Player.Add(Player);
+            await DB.SaveChangesAsync();
+            
+            // Show success message
+            playerCreated = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating player: {ex.Message}");
+            validationErrors.Add($"Error saving player: {ex.Message}");
+        }
     }
 }

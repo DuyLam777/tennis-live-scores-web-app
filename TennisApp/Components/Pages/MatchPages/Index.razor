@@ -1,22 +1,62 @@
 @page "/matches"
-@using Microsoft.AspNetCore.Components.QuickGrid
-@inject TennisApp.Data.TennisAppContext DB
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@using Microsoft.EntityFrameworkCore
+@using TennisApp.Data
 @using TennisApp.Models
+@using Microsoft.AspNetCore.Components.QuickGrid
+@implements IDisposable
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Matches</PageTitle>
 
-<h1>Index</h1>
-
+<h1>Matches</h1>
 <p>
-    <a href="matches/create">Create New</a>
+    <a href="/matches/create" class="btn btn-primary">Create New</a>
 </p>
 
-<QuickGrid Class="table" Items="DB.Match">
-    <PropertyColumn Property="match => match.MatchTime" />
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <QuickGrid Items="@matchesQuery" Class="table table-striped table-hover">
+        <PropertyColumn Property="m => m.Id" Title="ID" Sortable="true" />
+        <PropertyColumn Property="m => m.Court != null ? m.Court.Name : string.Empty" Title="Court" Sortable="true" />
+        <PropertyColumn Property="m => m.MatchTime" Title="Match Time" Format="yyyy-MM-dd HH:mm" Sortable="true" />
+        <PropertyColumn Property="m => m.Player1 != null ? m.Player1.Name : string.Empty" Title="Player 1" Sortable="true" />
+        <PropertyColumn Property="m => m.Player2 != null ? m.Player2.Name : string.Empty" Title="Player 2" Sortable="true" />
+        <PropertyColumn Property="m => m.ScoreboardId" Title="Scoreboard ID" Sortable="true" />
+        <TemplateColumn Title="Actions">
+            <a href="/matches/edit/@context.Id" class="btn btn-primary btn-sm">Edit</a>
+            <a href="/matches/details/@context.Id" class="btn btn-info btn-sm">Details</a>
+            <a href="/matches/delete/@context.Id" class="btn btn-danger btn-sm">Delete</a>
+        </TemplateColumn>
+    </QuickGrid>
+}
 
-    <TemplateColumn Context="match">
-        <a href="@($"matches/edit?id={match.Id}")">Edit</a> |
-        <a href="@($"matches/details?id={match.Id}")">Details</a> |
-        <a href="@($"matches/delete?id={match.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+@code {
+    private IQueryable<Match> matchesQuery = null!;
+    private bool isLoading = true;
+    private TennisAppContext dbContext = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+        
+        // Create the query - don't execute it yet
+        matchesQuery = dbContext.Match
+            .Include(m => m.Court)
+            .Include(m => m.Player1)
+            .Include(m => m.Player2)
+            .AsQueryable();
+            
+        isLoading = false;
+    }
+
+    public void Dispose()
+    {
+        // Make sure to dispose the context when the component is disposed
+        dbContext?.Dispose();
+    }
+}

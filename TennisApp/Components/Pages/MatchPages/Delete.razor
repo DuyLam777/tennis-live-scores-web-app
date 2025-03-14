@@ -1,10 +1,11 @@
-@page "/matches/delete"
-@inject TennisApp.Data.TennisAppContext DB
+@page "/matches/delete/{Id:int}"
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
+@implements IDisposable
 
-<PageTitle>Delete</PageTitle>
+<PageTitle>Delete Match</PageTitle>
 
 <h1>Delete</h1>
 
@@ -18,36 +19,75 @@
     }
     else {
         <dl class="row">
-            <dt class="col-sm-2">MatchTime</dt>
-            <dd class="col-sm-10">@match.MatchTime</dd>
+            <dt class="col-sm-2">Id</dt>
+            <dd class="col-sm-10">@match.Id</dd>
         </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Player 1</dt>
+            <dd class="col-sm-10">@match.Player1?.Name</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Player 2</dt>
+            <dd class="col-sm-10">@match.Player2?.Name</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Match Time</dt>
+            <dd class="col-sm-10">@match.MatchTime.ToString("g")</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Court</dt>
+            <dd class="col-sm-10">@match.Court?.Name</dd>
+        </dl>
+        
         <EditForm method="post" Model="match" OnValidSubmit="DeleteMatch" FormName="delete" Enhance>
-            <button type="submit" class="btn btn-danger" disabled="@(match is null)">Delete</button> |
-            <a href="/matches">Back to List</a>
+            <button type="submit" class="btn btn-danger">Delete</button> |
+            <a href="/matches" class="btn btn-secondary">Back to List</a>
         </EditForm>
     }
 </div>
 
 @code {
-    Match? match;
+    private Match? match;
+    private TennisApp.Data.TennisAppContext? dbContext;
 
-    [SupplyParameterFromQuery]
+    [Parameter]
     public int Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        match = await DB.Match.FirstOrDefaultAsync(m => m.Id == Id);
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+        
+        match = await dbContext.Match
+            .Include(m => m.Court)
+            .Include(m => m.Player1)
+            .Include(m => m.Player2)
+            .FirstOrDefaultAsync(m => m.Id == Id);
 
         if (match is null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/notfound");
         }
     }
 
     public async Task DeleteMatch()
     {
-        DB.Match.Remove(match!);
-        await DB.SaveChangesAsync();
+        if (match is null) return;
+        
+        // Create a new context for the delete operation
+        await using var deleteContext = await DbContextFactory.CreateDbContextAsync();
+        
+        var matchToDelete = await deleteContext.Match.FindAsync(match.Id);
+        if (matchToDelete != null)
+        {
+            deleteContext.Match.Remove(matchToDelete);
+            await deleteContext.SaveChangesAsync();
+        }
+        
         NavigationManager.NavigateTo("/matches");
+    }
+    
+    public void Dispose()
+    {
+        dbContext?.Dispose();
     }
 }

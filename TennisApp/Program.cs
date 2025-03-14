@@ -29,6 +29,13 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<TennisAppContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
+
+// Register the DbContextFactory with PostgreSQL - specify scoped lifetime
+builder.Services.AddDbContextFactory<TennisAppContext>(
+    options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
+    ServiceLifetime.Scoped // Explicitly set to Scoped to match DbContext
+);
+
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
 // Register HttpClient for components
@@ -45,6 +52,7 @@ builder.Services.AddResponseCompression(opts =>
 // Register WebSocket services
 builder.Services.AddSingleton<WebSocketHandler>();
 builder.Services.AddSingleton<CourtAvailabilityService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -54,9 +62,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
 
-// This could cause issues with the create pages. If it does, remove it since it's not necessary for the project.
+app.UseStaticFiles();
 app.UseAntiforgery();
 
 // Enable WebSockets
@@ -79,6 +86,7 @@ app.Map(
         }
     }
 );
+
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
 
@@ -112,4 +120,5 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
     }
 }
+
 app.Run();

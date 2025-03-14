@@ -1,10 +1,12 @@
-@page "/Matches/edit"
-@inject TennisApp.Data.TennisAppContext DB
+@page "/matches/edit/{Id:int}"
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
+@implements IDisposable
+@rendermode InteractiveServer
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Match</PageTitle>
 
 <h1>Edit</h1>
 
@@ -14,73 +16,262 @@
 {
     <p><em>Loading...</em></p>
 }
+else if (matchUpdated)
+{
+    <div class="alert alert-success">
+        <p>Match updated successfully!</p>
+        <a href="/matches" class="btn btn-primary">Back to Matches</a>
+    </div>
+}
 else
 {
     <div class="row">
         <div class="col-md-4">
-            <EditForm method="post" Model="Match" OnValidSubmit="UpdateMatch" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+            <form @onsubmit="UpdateMatch">
+                @if (validationErrors.Any())
+                {
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
                 <input type="hidden" name="Match.Id" value="@Match.Id" />
+
+                <!-- Court Dropdown -->
                 <div class="mb-3">
-                    <label for="matchtime" class="form-label">MatchTime:</label>
-                    <InputDate id="matchtime" @bind-Value="Match.MatchTime" class="form-control" />
-                    <ValidationMessage For="() => Match.MatchTime" class="text-danger" />
+                    <label for="court" class="form-label">Court:</label>
+                    <select id="court" @bind="Match.CourtId" class="form-control">
+                        <option value="0">-- Select a Court --</option>
+                        @foreach (var court in courts)
+                        {
+                            <option value="@court.Id">@court.Name</option>
+                        }
+                    </select>
                 </div>
+
+                <!-- Match Date and Time -->
+                <div class="mb-3">
+                    <label for="matchdate" class="form-label">Match Date:</label>
+                    <input id="matchdate" type="date" class="form-control" value="@_dateString"
+                        @onchange="@(e => _dateString = e.Value?.ToString() ?? _dateString)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="matchtime" class="form-label">Match Time:</label>
+                    <input id="matchtime" type="time" class="form-control" value="@_timeString"
+                        @onchange="@(e => _timeString = e.Value?.ToString() ?? _timeString)" />
+                </div>
+
+                <!-- Player 1 Dropdown -->
+                <div class="mb-3">
+                    <label for="player1" class="form-label">Player 1:</label>
+                    <select id="player1" @bind="Match.Player1Id" class="form-control">
+                        <option value="0">-- Select Player 1 --</option>
+                        @foreach (var player in players)
+                        {
+                            <option value="@player.Id">@player.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Player 2 Dropdown -->
+                <div class="mb-3">
+                    <label for="player2" class="form-label">Player 2:</label>
+                    <select id="player2" @bind="Match.Player2Id" class="form-control">
+                        <option value="0">-- Select Player 2 --</option>
+                        @foreach (var player in players)
+                        {
+                            <option value="@player.Id">@player.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Scoreboard Dropdown -->
+                <div class="mb-3">
+                    <label for="scoreboard" class="form-label">Scoreboard:</label>
+                    <select id="scoreboard" @bind="Match.ScoreboardId" class="form-control">
+                        <option value="0">-- Select a Scoreboard --</option>
+                        @foreach (var scoreboard in scoreboards)
+                        {
+                            <option value="@scoreboard.Id">@scoreboard.Id</option>
+                        }
+                    </select>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
+                <a href="/matches" class="btn btn-secondary">Cancel</a>
+            </form>
         </div>
     </div>
 }
 
-<div>
-    <a href="/matches">Back to List</a>
-</div>
-
 @code {
-    [SupplyParameterFromQuery]
+    [Parameter]
     public int Id { get; set; }
 
-    [SupplyParameterFromForm]
     public Match? Match { get; set; }
+
+    private List<Court> courts = new();
+    private List<Player> players = new();
+    private List<Scoreboard> scoreboards = new();
+    private TennisApp.Data.TennisAppContext? dbContext;
+    private bool matchUpdated = false;
+    private List<string> validationErrors = new();
+
+    // Simple string properties for date and time
+    private string _dateString = DateTime.Now.ToString("yyyy-MM-dd");
+    private string _timeString = DateTime.Now.ToString("HH:mm");
 
     protected override async Task OnInitializedAsync()
     {
-        Match ??= await DB.Match.FirstOrDefaultAsync(m => m.Id == Id);
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+
+        // Load reference data
+        courts = await dbContext.Court.ToListAsync();
+        players = await dbContext.Player.ToListAsync();
+        scoreboards = await dbContext.Scoreboard.ToListAsync();
+
+        // Load match
+        Match = await dbContext.Match
+        .Include(m => m.Court)
+        .Include(m => m.Player1)
+        .Include(m => m.Player2)
+        .FirstOrDefaultAsync(m => m.Id == Id);
 
         if (Match is null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/notfound");
+        }
+        else
+        {
+            // Initialize date and time strings from the loaded match
+            _dateString = Match.MatchTime.ToString("yyyy-MM-dd");
+            _timeString = Match.MatchTime.ToString("HH:mm");
+
+            Console.WriteLine($"Match loaded with date: {_dateString}, time: {_timeString}");
         }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see https://aka.ms/RazorPagesCRUD.
+    private bool ValidateModel()
+    {
+        validationErrors.Clear();
+
+        if (Match == null)
+        {
+            validationErrors.Add("Match not found");
+            return false;
+        }
+
+        // Validate Court
+        if (Match.CourtId <= 0 || !courts.Any(c => c.Id == Match.CourtId))
+        {
+            validationErrors.Add("Please select a valid court");
+            return false;
+        }
+
+        // Validate Player1
+        if (Match.Player1Id <= 0 || !players.Any(p => p.Id == Match.Player1Id))
+        {
+            validationErrors.Add("Please select a valid player for Player 1");
+            return false;
+        }
+
+        // Validate Player2
+        if (Match.Player2Id <= 0 || !players.Any(p => p.Id == Match.Player2Id))
+        {
+            validationErrors.Add("Please select a valid player for Player 2");
+            return false;
+        }
+
+        // Validate Scoreboard
+        if (Match.ScoreboardId <= 0 || !scoreboards.Any(s => s.Id == Match.ScoreboardId))
+        {
+            validationErrors.Add("Please select a valid scoreboard");
+            return false;
+        }
+
+        // Validate date/time
+        if (string.IsNullOrEmpty(_dateString) || string.IsNullOrEmpty(_timeString))
+        {
+            validationErrors.Add("Please enter both date and time");
+            return false;
+        }
+
+        return true;
+    }
+
     public async Task UpdateMatch()
     {
-        DB.Attach(Match!).State = EntityState.Modified;
+        // Prevent default form behavior
+        await Task.Yield();
+
+        if (!ValidateModel() || Match == null)
+        {
+            return;
+        }
 
         try
         {
-            await DB.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!MatchExists(Match!.Id))
+            // Create a DateTime directly from the string inputs
+            string combinedDateTimeStr = $"{_dateString} {_timeString}";
+
+            if (DateTime.TryParse(combinedDateTimeStr, out DateTime parsedDateTime))
             {
-                NavigationManager.NavigateTo("notfound");
+                // Simply mark the parsed DateTime as UTC without conversion
+                // This preserves the exact hours and minutes entered by the user
+                Match.MatchTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc);
+
+                Console.WriteLine($"Edit - Input date/time: {combinedDateTimeStr}");
+                Console.WriteLine($"Edit - Parsed as: {parsedDateTime}");
+                Console.WriteLine($"Edit - Saved as UTC: {Match.MatchTime}");
             }
             else
             {
-                throw;
+                validationErrors.Add($"Could not parse date and time: {combinedDateTimeStr}");
+                return;
+            }
+
+            // Create a new context for the update operation
+            await using var updateContext = await DbContextFactory.CreateDbContextAsync();
+            updateContext.Attach(Match).State = EntityState.Modified;
+
+            await updateContext.SaveChangesAsync();
+
+            // Show success message instead of navigating
+            matchUpdated = true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            bool exists = await MatchExistsAsync(Match.Id);
+            if (!exists)
+            {
+                validationErrors.Add("Match no longer exists");
+            }
+            else
+            {
+                validationErrors.Add("Update conflict occurred");
             }
         }
-
-        NavigationManager.NavigateTo("/matches");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating match: {ex.Message}");
+            validationErrors.Add($"Error updating match: {ex.Message}");
+        }
     }
 
-    bool MatchExists(int id)
+    private async Task<bool> MatchExistsAsync(int id)
     {
-        return DB.Match.Any(e => e.Id == id);
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        return await context.Match.AnyAsync(e => e.Id == id);
+    }
+
+    public void Dispose()
+    {
+        dbContext?.Dispose();
     }
 }
