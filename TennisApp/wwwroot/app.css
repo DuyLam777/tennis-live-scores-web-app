@@ -658,3 +658,20 @@ textarea.form-control:focus {
     color: var(--bs-body-color) !important;
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
+
+
+/* This is for the navbar */
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+    padding-top: 0; /* Remove default padding */
+}
+
+.content {
+    padding-top: 2rem; /* Add space below navbar */
+}
