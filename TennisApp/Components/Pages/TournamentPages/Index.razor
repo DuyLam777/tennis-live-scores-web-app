@@ -1,61 +1,137 @@
 @page "/tournaments"
-@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
-@using Microsoft.EntityFrameworkCore
-@using TennisApp.Data
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
 @using TennisApp.Models
 @using Microsoft.AspNetCore.Components.QuickGrid
-@implements IDisposable
+@using Microsoft.AspNetCore.Components.Web
+
 <PageTitle>Tournaments</PageTitle>
 
-<h1>Tournaments</h1>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="fw-bold bs-body-color">Tournaments</h1>
+                <a href="/tournaments/create" class="btn btn-primary px-4">
+                    Create New Tournament
+                </a>
+            </div>
+            <p class="text-muted">Manage all tennis tournaments in one place</p>
+        </div>
+    </div>
 
-<p>
-    <a href="/tournaments/create" class="btn btn-primary">Create New</a>
-</p>
-
-@if (isLoading)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <QuickGrid Items="@tournamentsQuery" Class="table table-striped table-hover">
-        <PropertyColumn Property="t => t.Name" Title="Name" Sortable="true" />
-        <PropertyColumn Property="t => t.StartDate" Title="Start Date" Format="yyyy-MM-dd" Sortable="true" />
-        <PropertyColumn Property="t => t.EndDate" Title="End Date" Format="yyyy-MM-dd" Sortable="true" />
-        <PropertyColumn Property="t => t.Host != null ? t.Host.Name : string.Empty" Title="Host Club" Sortable="true" />
-        <PropertyColumn Property="t => t.Status" Title="Status" Sortable="true" />
-        <PropertyColumn Property="t => t.Type" Title="Type" Sortable="true" />
-        <TemplateColumn Title="Actions">
-            <a href="/tournaments/edit/@context.Id" class="btn btn-primary btn-sm">Edit</a>
-            <a href="/tournaments/details/@context.Id" class="btn btn-info btn-sm">Details</a>
-            <a href="/tournaments/delete/@context.Id" class="btn btn-danger btn-sm">Delete</a>
-            <a href="/tournaments/@context.Id/matches" class="btn btn-success btn-sm">Matches</a>
-        </TemplateColumn>
-    </QuickGrid>
-}
+    @if (isLoading)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card shadow-sm border-0 p-4">
+                    <div class="d-flex justify-content-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="alert alert-danger shadow-sm" role="alert">
+                    <h4 class="alert-heading">Error Loading Data</h4>
+                    <p class="mb-0">@errorMessage</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <QuickGrid Items="@tournaments.AsQueryable()" Class="table table-hover mb-0">
+                                <PropertyColumn Property="t => t.Name" Title="Tournament Name" Sortable="true" />
+                                <PropertyColumn Property="t => t.StartDate" Title="Start Date" Format="yyyy-MM-dd"
+                                    Sortable="true" />
+                                <PropertyColumn Property="t => t.EndDate" Title="End Date" Format="yyyy-MM-dd"
+                                    Sortable="true" />
+                                <PropertyColumn Property="t => t.Host != null ? t.Host.Name : string.Empty"
+                                    Title="Host Club" Sortable="true" />
+                                <TemplateColumn Title="Status">
+                                    @{
+                                        var statusClass = context.Status switch
+                                        {
+                                            TournamentStatus.Ongoing => "bg-success",
+                                            TournamentStatus.Upcoming => "bg-info",
+                                            TournamentStatus.Completed => "bg-secondary",
+                                            TournamentStatus.Cancelled => "bg-danger",
+                                            _ => "bg-light"
+                                        };
+                                    }
+                                    <span class="badge @statusClass py-2 px-3 rounded-pill">@context.Status</span>
+                                </TemplateColumn>
+                                <PropertyColumn Property="t => t.Type" Title="Type" Sortable="true" />
+                                <TemplateColumn Title="Actions">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="/tournaments/edit/@context.Id" class="btn btn-outline-primary btn-sm">
+                                            Edit
+                                        </a>
+                                        <a href="/tournaments/details/@context.Id" class="btn btn-outline-info btn-sm">
+                                            Details
+                                        </a>
+                                        <a href="/tournaments/@context.Id/matches" class="btn btn-outline-success btn-sm">
+                                            Matches
+                                        </a>
+                                        <a href="/tournaments/delete/@context.Id" class="btn btn-outline-danger btn-sm">
+                                            Delete
+                                        </a>
+                                    </div>
+                                </TemplateColumn>
+                            </QuickGrid>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private IQueryable<Tournament> tournamentsQuery = null!;
+    private List<Tournament> tournaments = new();
     private bool isLoading = true;
-    private TennisAppContext dbContext = null!;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        // Create a dedicated context that will live for the component's lifetime
-        dbContext = await DbContextFactory.CreateDbContextAsync();
-
-        // Create the query - don't execute it yet
-        tournamentsQuery = dbContext.Tournament
-        .Include(t => t.Host)
-        .AsQueryable();
-
-        isLoading = false;
+        await LoadTournaments();
     }
 
-    public void Dispose()
+    private async Task LoadTournaments()
     {
-        // Make sure to dispose the context when the component is disposed
-        dbContext?.Dispose();
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var result = await HttpClient.GetFromJsonAsync<List<Tournament>>("api/Tournament");
+            if (result != null)
+            {
+                tournaments = result;
+            }
+            else
+            {
+                tournaments = new List<Tournament>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tournaments: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }

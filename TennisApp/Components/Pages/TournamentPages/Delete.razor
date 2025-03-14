@@ -1,10 +1,9 @@
 @page "/tournaments/delete/{Id:int}"
-@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
-@using Microsoft.EntityFrameworkCore
-@using TennisApp.Data
+@using System.Net.Http.Json
 @using TennisApp.Models
-@implements IDisposable
 
 <PageTitle>Delete Tournament</PageTitle>
 
@@ -15,6 +14,11 @@
 else if (tournament == null)
 {
     <div class="alert alert-danger">Tournament not found.</div>
+    <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
     <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
 }
 else
@@ -100,44 +104,54 @@ else
 
     private Tournament? tournament;
     private bool isLoading = true;
-    private TennisAppContext dbContext = null!;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        // Create a dedicated context that will live for the component's lifetime
-        dbContext = await DbContextFactory.CreateDbContextAsync();
         await LoadTournament();
     }
 
     private async Task LoadTournament()
     {
         isLoading = true;
-        tournament = await dbContext.Tournament
-        .Include(t => t.Host)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Court)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Player1)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Player2)
-        .FirstOrDefaultAsync(t => t.Id == Id);
+        errorMessage = null;
 
-        isLoading = false;
+        try
+        {
+            tournament = await HttpClient.GetFromJsonAsync<Tournament>($"api/Tournament/{Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tournament: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task DeleteTournament()
     {
         if (tournament != null)
         {
-            dbContext.Tournament.Remove(tournament);
-            await dbContext.SaveChangesAsync();
-            NavigationManager.NavigateTo("/tournaments");
-        }
-    }
+            try
+            {
+                var response = await HttpClient.DeleteAsync($"api/Tournament/{Id}");
 
-    public void Dispose()
-    {
-        // Make sure to dispose the context when the component is disposed
-        dbContext?.Dispose();
+                if (response.IsSuccessStatusCode)
+                {
+                    NavigationManager.NavigateTo("/tournaments");
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    errorMessage = $"Error deleting tournament: {response.StatusCode} - {errorContent}";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error deleting tournament: {ex.Message}";
+            }
+        }
     }
 }
