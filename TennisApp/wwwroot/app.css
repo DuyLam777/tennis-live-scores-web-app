@@ -675,3 +675,27 @@ main {
 .content {
     padding-top: 2rem; /* Add space below navbar */
 }
+
+/* Change the color of the table header */
+.col-title-text {
+    color: var(--text);
+}
+
+.input-group > .form-control {
+    background-color: var(--background);
+}
+
+/* Style for all input elements */
+input.form-control,
+select.form-select,
+textarea.form-control {
+    color: var(--bs-body-color) !important;
+}
+
+/* Optional: Style for focused input */
+input.form-control:focus,
+select.form-select:focus,
+textarea.form-control:focus {
+    color: var(--bs-body-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
