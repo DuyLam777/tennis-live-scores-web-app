@@ -3,36 +3,175 @@
 @using Microsoft.EntityFrameworkCore
 @using TennisApp.Data
 @using TennisApp.Models
-@using Microsoft.AspNetCore.Components.QuickGrid
 @implements IDisposable
 
 <PageTitle>Matches</PageTitle>
 
-<h1>Matches</h1>
-<p>
-    <a href="/matches/create" class="btn btn-primary">Create New</a>
-</p>
+<div class="page-container">
+    <h1>Match Schedule</h1>
 
-@if (isLoading)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <QuickGrid Items="@matchesQuery" Class="table table-striped table-hover">
-        <PropertyColumn Property="m => m.Id" Title="ID" Sortable="true" />
-        <PropertyColumn Property="m => m.Court != null ? m.Court.Name : string.Empty" Title="Court" Sortable="true" />
-        <PropertyColumn Property="m => m.MatchTime" Title="Match Time" Format="yyyy-MM-dd HH:mm" Sortable="true" />
-        <PropertyColumn Property="m => m.Player1 != null ? m.Player1.Name : string.Empty" Title="Player 1" Sortable="true" />
-        <PropertyColumn Property="m => m.Player2 != null ? m.Player2.Name : string.Empty" Title="Player 2" Sortable="true" />
-        <PropertyColumn Property="m => m.ScoreboardId" Title="Scoreboard ID" Sortable="true" />
-        <TemplateColumn Title="Actions">
-            <a href="/matches/edit/@context.Id" class="btn btn-primary btn-sm">Edit</a>
-            <a href="/matches/details/@context.Id" class="btn btn-info btn-sm">Details</a>
-            <a href="/matches/delete/@context.Id" class="btn btn-danger btn-sm">Delete</a>
-        </TemplateColumn>
-    </QuickGrid>
-}
+    <p>
+        <a href="/matches/create" class="btn btn-primary">Create New Match</a>
+    </p>
+
+    @if (isLoading)
+    {
+        <p><em>Loading matches...</em></p>
+    }
+    else
+    {
+        <div class="match-grid">
+            @foreach (var match in matchesQuery)
+            {
+                <div class="match-card @GetMatchStatusClass(match)">
+                    <div class="match-header">
+                        <span class="match-time">@match.MatchTime.ToString("dd MMM yyyy, HH:mm")</span>
+                        <span class="match-status">@GetMatchStatus(match)</span>
+                    </div>
+                    <div class="match-teams">
+                        <div class="team">
+                            <span class="team-name">@(match.Player1?.Name ?? "TBD")</span>
+                        </div>
+                        <div class="vs">vs</div>
+                        <div class="team">
+                            <span class="team-name">@(match.Player2?.Name ?? "TBD")</span>
+                        </div>
+                    </div>
+                    <div class="match-details">
+                        <span class="court">Court: @(match.Court?.Name ?? "TBD")</span>
+                        <span class="scoreboard">Scoreboard: @match.ScoreboardId</span>
+                    </div>
+                    <div class="match-actions">
+                        <a href="/matches/edit/@match.Id" class="btn btn-primary btn-sm">Edit</a>
+                        <a href="/matches/details/@match.Id" class="btn btn-info btn-sm">Details</a>
+                        <a href="/matches/delete/@match.Id" class="btn btn-danger btn-sm">Delete</a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .page-container {
+        background-color: #181825 !important;
+        color: #cdd6f4 !important;
+        min-height: 100vh !important;
+        padding: 1.5rem !important;
+    }
+
+    .match-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .match-card {
+        background-color: #1e1e2e !important;
+        border-radius: 0.75rem !important;
+        padding: 1.5rem !important;
+        transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+
+    .match-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .match-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .match-time {
+        font-size: 0.9rem;
+        color: #cdd6f4 !important;
+    }
+
+    .match-status {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+    }
+
+    .match-status.live {
+        background-color: #f38ba8 !important;
+        color: #181825 !important;
+    }
+
+    .match-status.upcoming {
+        background-color: #89b4fa !important;
+        color: #181825 !important;
+    }
+
+    .match-status.completed {
+        background-color: #a6e3a1 !important;
+        color: #181825 !important;
+    }
+
+    .match-teams {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .team {
+        text-align: center;
+    }
+
+    .team-name {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #cdd6f4 !important;
+    }
+
+    .vs {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #cdd6f4 !important;
+    }
+
+    .match-details {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: #cdd6f4 !important;
+        margin-bottom: 1rem;
+    }
+
+    .match-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background-color: #89b4fa !important;
+        border-color: #89b4fa !important;
+        color: #181825 !important;
+    }
+
+    .btn-info {
+        background-color: #74c7ec !important;
+        border-color: #74c7ec !important;
+        color: #181825 !important;
+    }
+
+    .btn-danger {
+        background-color: #f38ba8 !important;
+        border-color: #f38ba8 !important;
+        color: #181825 !important;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
 
 @code {
     private IQueryable<Match> matchesQuery = null!;
@@ -58,5 +197,22 @@ else
     {
         // Make sure to dispose the context when the component is disposed
         dbContext?.Dispose();
+    }
+
+    private string GetMatchStatus(Match match)
+    {
+        // Logic to determine match status (live, upcoming, completed)
+        if (match.MatchTime > DateTime.Now)
+            return "Upcoming";
+        else if (match.MatchTime.AddHours(2) > DateTime.Now)
+            return "Live";
+        else
+            return "Completed";
+    }
+
+    private string GetMatchStatusClass(Match match)
+    {
+        // Return CSS class based on match status
+        return GetMatchStatus(match).ToLower();
     }
 }

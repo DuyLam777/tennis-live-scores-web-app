@@ -399,3 +399,20 @@ nav.flex-column {
         margin-right: 0 !important;
     }
 }
+
+
+/* This is for the navbar */
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+    padding-top: 0; /* Remove default padding */
+}
+
+.content {
+    padding-top: 2rem; /* Add space below navbar */
+}
