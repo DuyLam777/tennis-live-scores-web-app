@@ -3,23 +3,88 @@
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Players</PageTitle>
 
-<h1>Index</h1>
+<div class="page-container">
+    <h1>Players</h1>
 
-<p>
-    <a href="players/create">Create New</a>
-</p>
+    <p>
+        <a href="players/create" class="btn btn-primary">Create New</a>
+    </p>
 
-<QuickGrid Class="table" Items="DB.Player">
-    <PropertyColumn Property="player => player.Name" />
-    <PropertyColumn Property="player => player.Country" />
-    <PropertyColumn Property="player => player.DateOfBirth" />
-    <PropertyColumn Property="player => player.gender" />
+    <div class="table-container">
+        <QuickGrid Class="quick-grid" Items="DB.Player">
+            <PropertyColumn Property="player => player.Name" Title="Name" Sortable="true" />
+            <PropertyColumn Property="player => player.Country" Title="Country" Sortable="true" />
+            <PropertyColumn Property="player => player.DateOfBirth" Title="Date of Birth" Sortable="true" Format="yyyy-MM-dd" />
+            <PropertyColumn Property="player => player.gender" Title="Gender" Sortable="true" />
 
-    <TemplateColumn Context="player">
-        <a href="@($"players/edit?id={player.Id}")">Edit</a> |
-        <a href="@($"players/details?id={player.Id}")">Details</a> |
-        <a href="@($"players/delete?id={player.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+            <TemplateColumn Title="Actions">
+                <a href="@($"players/edit?id={context.Id}")" class="btn btn-primary btn-sm action-button">Edit</a>
+                <a href="@($"players/details?id={context.Id}")" class="btn btn-info btn-sm action-button">Details</a>
+                <a href="@($"players/delete?id={context.Id}")" class="btn btn-danger btn-sm action-button">Delete</a>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+</div>
+
+<style>
+    .page-container {
+        background-color: #181825 !important;
+        color: #cdd6f4 !important;
+        min-height: 100vh !important;
+        padding: 1.5rem !important;
+    }
+
+    .table-container {
+        background-color: #1e1e2e !important;
+        border-radius: 0.75rem !important;
+        padding: 1.5rem !important;
+        overflow: auto !important;
+    }
+
+    ::deep .quick-grid {
+        color: #cdd6f4 !important;
+        background-color: #1e1e2e !important;
+    }
+
+    ::deep .quick-grid th {
+        background-color: #313244 !important;
+        color: #cdd6f4 !important;
+        border-bottom: 1px solid #45475a !important;
+    }
+
+    ::deep .quick-grid td {
+        color: #cdd6f4 !important;
+        border-bottom: 1px solid #313244 !important;
+    }
+
+    .btn-primary {
+        background-color: #89b4fa !important;
+        border-color: #89b4fa !important;
+        color: #181825 !important;
+    }
+
+    .btn-info {
+        background-color: #74c7ec !important;
+        border-color: #74c7ec !important;
+        color: #181825 !important;
+    }
+
+    .btn-danger {
+        background-color: #f38ba8 !important;
+        border-color: #f38ba8 !important;
+        color: #181825 !important;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+
+    .action-button {
+        margin-right: 0.5rem !important;
+        border-radius: 0.5rem !important;
+        padding: 0.5rem 1rem !important;
+    }
+</style>
