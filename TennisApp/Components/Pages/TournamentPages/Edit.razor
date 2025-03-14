@@ -1,13 +1,12 @@
-@page "/tournaments/{TournamentId:int}/matches"
-@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@page "/tournaments/edit/{Id:int}"
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
-@using Microsoft.EntityFrameworkCore
-@using TennisApp.Data
+@using System.Net.Http.Json
 @using TennisApp.Models
-@using Microsoft.AspNetCore.Components.QuickGrid
-@implements IDisposable
+@using Microsoft.AspNetCore.Components.Forms
 
-<PageTitle>Tournament Matches</PageTitle>
+<PageTitle>Edit Tournament</PageTitle>
 
 @if (isLoading)
 {
@@ -20,120 +19,228 @@ else if (tournament == null)
 }
 else
 {
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Matches - @tournament.Name</h1>
-        <div>
-            <a href="/matches/create?tournamentId=@TournamentId" class="btn btn-primary">Add Match</a>
-            <a href="/tournaments/details/@TournamentId" class="btn btn-outline-secondary ms-2">Back to Tournament</a>
-        </div>
-    </div>
+    <h1>Edit Tournament</h1>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5>Tournament Information</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Start Date:</dt>
-                        <dd class="col-sm-8">@tournament.StartDate.ToShortDateString()</dd>
+    <div class="row">
+        <div class="col-md-8">
+            <EditForm Model="@tournament" OnValidSubmit="HandleValidSubmit" FormName="tournamentEditForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-                        <dt class="col-sm-4">End Date:</dt>
-                        <dd class="col-sm-8">@tournament.EndDate.ToShortDateString()</dd>
-                    </dl>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Tournament Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <InputText id="name" @bind-Value="tournament.Name" class="form-control" />
+                            <ValidationMessage For="@(() => tournament.Name)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <InputDate id="startDate" @bind-Value="tournament.StartDate" class="form-control" />
+                                <ValidationMessage For="@(() => tournament.StartDate)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <InputDate id="endDate" @bind-Value="tournament.EndDate" class="form-control" />
+                                <ValidationMessage For="@(() => tournament.EndDate)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hostId" class="form-label">Host Club</label>
+                            <InputSelect id="hostId" @bind-Value="tournament.HostId" class="form-select">
+                                <option value="">-- Select a Host Club --</option>
+                                @foreach (var club in clubs)
+                                {
+                                    <option value="@club.Id">@club.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => tournament.HostId)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" @bind-Value="tournament.Description" class="form-control"
+                                rows="3" />
+                            <ValidationMessage For="@(() => tournament.Description)" />
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Status:</dt>
-                        <dd class="col-sm-8">
-                            <span class="badge @GetStatusBadgeClass(tournament.Status)">
-                                @tournament.Status
-                            </span>
-                        </dd>
 
-                        <dt class="col-sm-4">Type:</dt>
-                        <dd class="col-sm-8">@tournament.Type</dd>
-                    </dl>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Tournament Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <InputSelect id="status" @bind-Value="tournament.Status" class="form-select">
+                                    @foreach (var status in Enum.GetValues<TournamentStatus>())
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => tournament.Status)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="type" class="form-label">Tournament Type</label>
+                                <InputSelect id="type" @bind-Value="tournament.Type" class="form-select">
+                                    @foreach (var type in Enum.GetValues<TournamentType>())
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => tournament.Type)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="maxParticipants" class="form-label">Max Participants</label>
+                                <InputNumber id="maxParticipants" @bind-Value="tournament.MaxParticipants"
+                                    class="form-control" />
+                                <ValidationMessage For="@(() => tournament.MaxParticipants)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="/tournaments" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </EditForm>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Tournament Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>This tournament has:</p>
+                    <ul>
+                        <li><strong>@(tournament.Matches?.Count ?? 0)</strong> scheduled matches</li>
+                        <li><strong>@tournament.RegisteredCount</strong> registered participants</li>
+                    </ul>
+
+                    @if (tournament.MaxParticipants.HasValue && tournament.RegisteredCount >
+                                    tournament.MaxParticipants.Value)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> The number of participants exceeds the maximum limit.
+                        </div>
+                    }
+
+                    @if (tournament.EndDate < DateTime.Today && tournament.Status != TournamentStatus.Completed &&
+                                    tournament.Status != TournamentStatus.Cancelled)
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> This tournament's end date has passed. Consider updating the
+                            status to Completed.
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
-
-    @if (!matchesQuery.Any())
-    {
-        <div class="alert alert-info">
-            No matches have been added to this tournament yet. Click "Add Match" to schedule a match.
-        </div>
-    }
-    else
-    {
-        <QuickGrid Items="@matchesQuery" Class="table table-striped table-hover">
-            <PropertyColumn Property="m => m.Id" Title="ID" Sortable="true" />
-            <PropertyColumn Property="m => m.Court != null ? m.Court.Name : string.Empty" Title="Court" Sortable="true" />
-            <PropertyColumn Property="m => m.MatchTime" Title="Match Time" Format="yyyy-MM-dd HH:mm" Sortable="true" />
-            <PropertyColumn Property="m => m.Player1 != null ? m.Player1.Name : string.Empty" Title="Player 1"
-                Sortable="true" />
-            <PropertyColumn Property="m => m.Player2 != null ? m.Player2.Name : string.Empty" Title="Player 2"
-                Sortable="true" />
-            <PropertyColumn Property="m => m.ScoreboardId" Title="Scoreboard ID" Sortable="true" />
-            <TemplateColumn Title="Actions">
-                <a href="/matches/edit/@context.Id" class="btn btn-primary btn-sm">Edit</a>
-                <a href="/matches/details/@context.Id" class="btn btn-info btn-sm">Details</a>
-                <a href="/matches/delete/@context.Id" class="btn btn-danger btn-sm">Delete</a>
-            </TemplateColumn>
-        </QuickGrid>
-    }
 }
 
 @code {
     [Parameter]
-    public int TournamentId { get; set; }
+    public int Id { get; set; }
 
     private Tournament? tournament;
-    private IQueryable<Match> matchesQuery = null!;
+    private List<Club> clubs = new();
     private bool isLoading = true;
-    private TennisAppContext dbContext = null!;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        // Create a dedicated context that will live for the component's lifetime
-        dbContext = await DbContextFactory.CreateDbContextAsync();
-
+        // Load tournament data
         await LoadTournament();
 
-        // Create the query - don't execute it yet
-        matchesQuery = dbContext.Match
-        .Where(m => m.TournamentId == TournamentId)
-        .Include(m => m.Court)
-        .Include(m => m.Player1)
-        .Include(m => m.Player2)
-        .AsQueryable();
-
-        isLoading = false;
+        // Load clubs for dropdown
+        try
+        {
+            var clubResponse = await HttpClient.GetFromJsonAsync<List<Club>>("api/Club");
+            if (clubResponse != null)
+            {
+                clubs = clubResponse;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading clubs: {ex.Message}";
+        }
     }
 
     private async Task LoadTournament()
     {
-        tournament = await dbContext.Tournament
-        .FirstOrDefaultAsync(t => t.Id == TournamentId);
-    }
+        isLoading = true;
 
-    private string GetStatusBadgeClass(TournamentStatus status)
-    {
-        return status switch
+        try
         {
-            TournamentStatus.Upcoming => "bg-info",
-            TournamentStatus.Ongoing => "bg-primary",
-            TournamentStatus.Completed => "bg-success",
-            TournamentStatus.Cancelled => "bg-danger",
-            _ => "bg-secondary"
-        };
+            // Get tournament from API
+            tournament = await HttpClient.GetFromJsonAsync<Tournament>($"api/Tournament/{Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tournament: {ex.Message}";
+        }
+
+        isLoading = false;
     }
 
-    public void Dispose()
+    private async Task HandleValidSubmit()
     {
-        // Make sure to dispose the context when the component is disposed
-        dbContext?.Dispose();
+        try
+        {
+            if (tournament == null)
+            {
+                errorMessage = "Tournament not found";
+                return;
+            }
+
+            // Validate dates
+            if (tournament.EndDate < tournament.StartDate)
+            {
+                errorMessage = "End date must be after or equal to start date";
+                return;
+            }
+
+            // Convert date times to UTC for PostgreSQL compatibility
+            tournament.StartDate = DateTime.SpecifyKind(tournament.StartDate, DateTimeKind.Utc);
+            tournament.EndDate = DateTime.SpecifyKind(tournament.EndDate, DateTimeKind.Utc);
+
+            // Use API to update tournament
+            var response = await HttpClient.PutAsJsonAsync($"api/Tournament/{Id}", tournament);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Redirect back to the tournaments list
+                NavigationManager.NavigateTo("/tournaments");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Error updating tournament: {response.StatusCode} - {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating tournament: {ex.Message}";
+        }
     }
-}
+}   

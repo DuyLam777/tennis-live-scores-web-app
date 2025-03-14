@@ -66,6 +66,10 @@ namespace TennisApp.Controllers
                 return BadRequest(ModelState);
             }
 
+            // Ensure dates are in UTC for PostgreSQL
+            tournament.StartDate = DateTime.SpecifyKind(tournament.StartDate, DateTimeKind.Utc);
+            tournament.EndDate = DateTime.SpecifyKind(tournament.EndDate, DateTimeKind.Utc);
+
             _context.Tournament.Add(tournament);
             await _context.SaveChangesAsync();
 
@@ -95,6 +99,10 @@ namespace TennisApp.Controllers
                 );
                 return BadRequest(ModelState);
             }
+
+            // Ensure dates are in UTC for PostgreSQL
+            tournament.StartDate = DateTime.SpecifyKind(tournament.StartDate, DateTimeKind.Utc);
+            tournament.EndDate = DateTime.SpecifyKind(tournament.EndDate, DateTimeKind.Utc);
 
             try
             {

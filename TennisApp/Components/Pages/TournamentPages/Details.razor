@@ -1,11 +1,10 @@
 @page "/tournaments/details/{Id:int}"
-@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
-@using Microsoft.EntityFrameworkCore
-@using TennisApp.Data
+@using System.Net.Http.Json
 @using TennisApp.Models
-@implements IDisposable
 
 <PageTitle>Tournament Details</PageTitle>
 
@@ -16,6 +15,11 @@
 else if (tournament == null)
 {
     <div class="alert alert-danger">Tournament not found.</div>
+    <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
     <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
 }
 else
@@ -189,10 +193,11 @@ else
     </div>
 }
 
-@if (showStatusModal)
+@if (showStatusModal && tournament != null)
 {
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Update Tournament Status</h5>
@@ -218,18 +223,19 @@ else
     </div>
 }
 
-@if (showDeleteModal)
+@if (showDeleteModal && tournament != null)
 {
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Confirm Deletion</h5>
                     <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete the tournament "@tournament?.Name"?</p>
-                    @if (tournament?.Matches.Count > 0)
+                    <p>Are you sure you want to delete the tournament "@tournament.Name"?</p>
+                    @if (tournament.Matches.Count > 0)
                     {
                         <div class="alert alert-warning">
                             This tournament has @tournament.Matches.Count associated matches that will also be deleted.
@@ -247,8 +253,9 @@ else
 
 @if (showShareModal)
 {
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Share Tournament</h5>
@@ -288,42 +295,39 @@ else
     private string shareUrl = "";
     private TournamentStatus newStatus;
     private ElementReference shareUrlInput;
-    private TennisAppContext dbContext = null!;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        // Create a dedicated context that will live for the component's lifetime
-        dbContext = await DbContextFactory.CreateDbContextAsync();
         await LoadTournament();
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (dbContext != null)
-        {
-            await LoadTournament();
-        }
+        await LoadTournament();
     }
 
     private async Task LoadTournament()
     {
         isLoading = true;
-        tournament = await dbContext.Tournament
-        .Include(t => t.Host)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Player1)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Player2)
-        .Include(t => t.Matches)
-        .ThenInclude(m => m.Court)
-        .FirstOrDefaultAsync(t => t.Id == Id);
+        errorMessage = null;
 
-        if (tournament != null)
+        try
         {
-            newStatus = tournament.Status;
+            tournament = await HttpClient.GetFromJsonAsync<Tournament>($"api/Tournament/{Id}");
+            if (tournament != null)
+            {
+                newStatus = tournament.Status;
+            }
         }
-
-        isLoading = false;
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tournament: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private string GetStatusBadgeClass(TournamentStatus status)
@@ -342,10 +346,27 @@ else
     {
         if (tournament != null)
         {
-            tournament.Status = newStatus;
-            dbContext.Tournament.Update(tournament);
-            await dbContext.SaveChangesAsync();
-            showStatusModal = false;
+            try
+            {
+                // Use the UpdateStatus API endpoint
+                var response = await HttpClient.PutAsJsonAsync($"api/Tournament/{Id}/UpdateStatus", newStatus);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Update local tournament object with new status
+                    tournament.Status = newStatus;
+                    showStatusModal = false;
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    errorMessage = $"Error updating status: {response.StatusCode} - {errorContent}";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error updating status: {ex.Message}";
+            }
         }
     }
 
@@ -353,10 +374,27 @@ else
     {
         if (tournament != null)
         {
-            dbContext.Tournament.Remove(tournament);
-            await dbContext.SaveChangesAsync();
-            showDeleteModal = false;
-            NavigationManager.NavigateTo("/tournaments");
+            try
+            {
+                var response = await HttpClient.DeleteAsync($"api/Tournament/{Id}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    showDeleteModal = false;
+                    NavigationManager.NavigateTo("/tournaments");
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    errorMessage = $"Error deleting tournament: {response.StatusCode} - {errorContent}";
+                    showDeleteModal = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error deleting tournament: {ex.Message}";
+                showDeleteModal = false;
+            }
         }
     }
 
@@ -375,11 +413,5 @@ else
     {
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
         linkCopied = true;
-    }
-
-    public void Dispose()
-    {
-        // Make sure to dispose the context when the component is disposed
-        dbContext?.Dispose();
     }
 }
