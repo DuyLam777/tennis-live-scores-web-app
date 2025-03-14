@@ -1,0 +1,175 @@
+@page "/tournaments/create"
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+@using TennisApp.Data
+@using TennisApp.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@implements IDisposable
+
+<PageTitle>Create Tournament</PageTitle>
+
+<h1>Create Tournament</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <EditForm Model="@tournament" OnValidSubmit="HandleValidSubmit" FormName="tournamentCreateForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Tournament Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <InputText id="name" @bind-Value="tournament.Name" class="form-control" />
+                        <ValidationMessage For="@(() => tournament.Name)" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <InputDate id="startDate" @bind-Value="tournament.StartDate" class="form-control" />
+                            <ValidationMessage For="@(() => tournament.StartDate)" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <InputDate id="endDate" @bind-Value="tournament.EndDate" class="form-control" />
+                            <ValidationMessage For="@(() => tournament.EndDate)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hostId" class="form-label">Host Club</label>
+                        <InputSelect id="hostId" @bind-Value="tournament.HostId" class="form-select">
+                            <option value="">-- Select a Host Club --</option>
+                            @foreach (var club in clubs)
+                            {
+                                <option value="@club.Id">@club.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => tournament.HostId)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <InputTextArea id="description" @bind-Value="tournament.Description" class="form-control"
+                            rows="3" />
+                        <ValidationMessage For="@(() => tournament.Description)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Tournament Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <InputSelect id="status" @bind-Value="tournament.Status" class="form-select">
+                                @foreach (var status in Enum.GetValues<TournamentStatus>())
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => tournament.Status)" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="type" class="form-label">Tournament Type</label>
+                            <InputSelect id="type" @bind-Value="tournament.Type" class="form-select">
+                                @foreach (var type in Enum.GetValues<TournamentType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => tournament.Type)" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="maxParticipants" class="form-label">Max Participants</label>
+                            <InputNumber id="maxParticipants" @bind-Value="tournament.MaxParticipants"
+                                class="form-control" />
+                            <ValidationMessage For="@(() => tournament.MaxParticipants)" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Create Tournament</button>
+                <a href="/tournaments" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </EditForm>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Guide</h5>
+            </div>
+            <div class="card-body">
+                <p>Create a new tournament by filling out the required information:</p>
+                <ul>
+                    <li><strong>Name:</strong> The tournament's official name</li>
+                    <li><strong>Dates:</strong> Start and end dates</li>
+                    <li><strong>Host Club:</strong> The club organizing the tournament</li>
+                    <li><strong>Status:</strong> Current state of the tournament</li>
+                    <li><strong>Type:</strong> Format of the tournament (Singles/Doubles/Mixed)</li>
+                </ul>
+                <p>After creating the tournament, you'll be able to add matches to it.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Tournament tournament = new()
+    {
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today.AddDays(7),
+        Status = TournamentStatus.Upcoming,
+        Type = TournamentType.Singles
+    };
+
+    private List<Club> clubs = new();
+    private TennisAppContext dbContext = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+
+        // Load clubs for the dropdown
+        clubs = await dbContext.Club.ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Validate dates
+        if (tournament.EndDate < tournament.StartDate)
+        {
+            // Could use a custom validator, but this works too
+            return;
+        }
+
+        // Save the tournament
+        dbContext.Tournament.Add(tournament);
+        await dbContext.SaveChangesAsync();
+
+        // Redirect back to the index
+        NavigationManager.NavigateTo("/tournaments");
+    }
+
+    public void Dispose()
+    {
+        // Make sure to dispose the context when the component is disposed
+        dbContext?.Dispose();
+    }
+}

@@ -29,6 +29,7 @@ namespace TennisApp.Data
                 || context.Scoreboard.Any()
                 || context.User.Any()
                 || context.Venue.Any()
+                || context.Tournament.Any()
             )
             {
                 Console.WriteLine("Database already seeded");
@@ -157,6 +158,38 @@ namespace TennisApp.Data
                 },
             };
             context.User.AddRange(users);
+
+            // Seed Tournaments
+            var tournaments = new List<Tournament>
+            {
+                new Tournament
+                {
+                    Name = "Tournament A",
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow.AddDays(7),
+                    Host = clubs[0],
+                    HostId = clubs[0].Id,
+                    Description = "Tournament A",
+                    Status = TournamentStatus.Upcoming,
+                    MaxParticipants = 16,
+                    Type = TournamentType.Singles,
+                },
+                {
+                    new Tournament
+                    {
+                        Name = "Tournament B",
+                        StartDate = DateTime.UtcNow,
+                        EndDate = DateTime.UtcNow.AddDays(7),
+                        Host = clubs[1],
+                        HostId = clubs[1].Id,
+                        Description = "Tournament B",
+                        Status = TournamentStatus.Upcoming,
+                        MaxParticipants = 32,
+                        Type = TournamentType.Doubles,
+                    }
+                },
+            };
+            context.Tournament.AddRange(tournaments);
 
             // Save all changes to the database
             context.SaveChanges();

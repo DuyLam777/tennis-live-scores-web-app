@@ -1,6 +1,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
-
+using TennisApp.Models;
 
 namespace TennisApp.Data;
 
@@ -17,4 +17,5 @@ public class TennisAppContext(DbContextOptions<TennisAppContext> options) : DbCo
 
     public DbSet<TennisApp.Models.Game> Game { get; set; } = default!;
 
+    public DbSet<TennisApp.Models.Tournament> Tournament { get; set; } = default!;
 }

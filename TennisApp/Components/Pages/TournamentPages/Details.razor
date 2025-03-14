@@ -1,0 +1,385 @@
+@page "/tournaments/details/{Id:int}"
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@using Microsoft.EntityFrameworkCore
+@using TennisApp.Data
+@using TennisApp.Models
+@implements IDisposable
+
+<PageTitle>Tournament Details</PageTitle>
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (tournament == null)
+{
+    <div class="alert alert-danger">Tournament not found.</div>
+    <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@tournament.Name</h1>
+            <div>
+                <a href="/tournaments/edit/@tournament.Id" class="btn btn-primary me-2">Edit</a>
+                <a href="/tournaments" class="btn btn-outline-secondary">Back</a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Tournament Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Start Date</dt>
+                                    <dd>@tournament.StartDate.ToShortDateString()</dd>
+
+                                    <dt>End Date</dt>
+                                    <dd>@tournament.EndDate.ToShortDateString()</dd>
+
+                                    <dt>Duration</dt>
+                                    <dd>@tournament.DurationInDays days</dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Host Club</dt>
+                                    <dd>@(tournament.Host?.Name ?? "N/A")</dd>
+
+                                    <dt>Status</dt>
+                                    <dd>
+                                        <span class="badge @GetStatusBadgeClass(tournament.Status)">
+                                            @tournament.Status
+                                        </span>
+                                    </dd>
+
+                                    <dt>Type</dt>
+                                    <dd>@tournament.Type</dd>
+
+                                    <dt>Maximum Participants</dt>
+                                    <dd>@(tournament.MaxParticipants?.ToString() ?? "No limit")</dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(tournament.Description))
+                        {
+                            <div class="mt-3">
+                                <h6>Description</h6>
+                                <p>@tournament.Description</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Tournament Matches</h5>
+                        <a href="/tournaments/@tournament.Id/matches" class="btn btn-sm btn-success">
+                            <i class="bi bi-plus"></i> Add Match
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        @if (!tournament.Matches.Any())
+                        {
+                            <div class="alert alert-info">No matches have been added to this tournament yet.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Court</th>
+                                            <th>Player 1</th>
+                                            <th>Player 2</th>
+                                            <th>Date & Time</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var match in tournament.Matches)
+                                        {
+                                            <tr>
+                                                <td>@(match.Court?.Name ?? "N/A")</td>
+                                                <td>@(match.Player1?.Name ?? "N/A")</td>
+                                                <td>@(match.Player2?.Name ?? "N/A")</td>
+                                                <td>@match.MatchTime.ToString("g")</td>
+                                                <td>
+                                                    <a href="/matches/details/@match.Id" class="btn btn-sm btn-info">
+                                                        Details
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Tournament Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="text-center">
+                                <div class="display-4">@tournament.RegisteredCount</div>
+                                <div>Participants</div>
+                            </div>
+                            <div class="border-end mx-4"></div>
+                            <div class="text-center">
+                                <div class="display-4">@tournament.Matches.Count</div>
+                                <div>Matches</div>
+                            </div>
+                        </div>
+
+                        @if (tournament.MaxParticipants.HasValue)
+                        {
+                            <div class="mt-3">
+                                <h6>Registration Status</h6>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                        style="width: @(Math.Min(100, tournament.RegisteredCount * 100 / tournament.MaxParticipants.Value))%"
+                                        aria-valuenow="@tournament.RegisteredCount" aria-valuemin="0"
+                                        aria-valuemax="@tournament.MaxParticipants">
+                                        @tournament.RegisteredCount / @tournament.MaxParticipants
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/tournaments/@tournament.Id/matches" class="btn btn-success">
+                                <i class="bi bi-plus"></i> Add Match
+                            </a>
+                            <button class="btn btn-info" @onclick="GenerateShareLink">
+                                <i class="bi bi-link"></i> Share Tournament
+                            </button>
+                            <button class="btn btn-warning" @onclick="() => showStatusModal = true">
+                                <i class="bi bi-clock"></i> Update Status
+                            </button>
+                            <button class="btn btn-danger" @onclick="() => showDeleteModal = true">
+                                <i class="bi bi-trash"></i> Delete Tournament
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showStatusModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Tournament Status</h5>
+                    <button type="button" class="btn-close" @onclick="() => showStatusModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tournament Status</label>
+                        <select class="form-select" @bind="newStatus">
+                            @foreach (var status in Enum.GetValues<TournamentStatus>())
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showStatusModal = false">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmStatusUpdate">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the tournament "@tournament?.Name"?</p>
+                    @if (tournament?.Matches.Count > 0)
+                    {
+                        <div class="alert alert-warning">
+                            This tournament has @tournament.Matches.Count associated matches that will also be deleted.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showShareModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share Tournament</h5>
+                    <button type="button" class="btn-close" @onclick="() => showShareModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Share this link to allow others to view this tournament:</p>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" readonly value="@shareUrl" @ref="shareUrlInput" />
+                        <button class="btn btn-outline-primary" @onclick="CopyShareLink">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                    @if (linkCopied)
+                    {
+                        <div class="alert alert-success">Link copied to clipboard!</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showShareModal = false">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tournament? tournament;
+    private bool isLoading = true;
+    private bool showStatusModal = false;
+    private bool showDeleteModal = false;
+    private bool showShareModal = false;
+    private bool linkCopied = false;
+    private string shareUrl = "";
+    private TournamentStatus newStatus;
+    private ElementReference shareUrlInput;
+    private TennisAppContext dbContext = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+        await LoadTournament();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (dbContext != null)
+        {
+            await LoadTournament();
+        }
+    }
+
+    private async Task LoadTournament()
+    {
+        isLoading = true;
+        tournament = await dbContext.Tournament
+        .Include(t => t.Host)
+        .Include(t => t.Matches)
+        .ThenInclude(m => m.Player1)
+        .Include(t => t.Matches)
+        .ThenInclude(m => m.Player2)
+        .Include(t => t.Matches)
+        .ThenInclude(m => m.Court)
+        .FirstOrDefaultAsync(t => t.Id == Id);
+
+        if (tournament != null)
+        {
+            newStatus = tournament.Status;
+        }
+
+        isLoading = false;
+    }
+
+    private string GetStatusBadgeClass(TournamentStatus status)
+    {
+        return status switch
+        {
+            TournamentStatus.Upcoming => "bg-info",
+            TournamentStatus.Ongoing => "bg-primary",
+            TournamentStatus.Completed => "bg-success",
+            TournamentStatus.Cancelled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task ConfirmStatusUpdate()
+    {
+        if (tournament != null)
+        {
+            tournament.Status = newStatus;
+            dbContext.Tournament.Update(tournament);
+            await dbContext.SaveChangesAsync();
+            showStatusModal = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (tournament != null)
+        {
+            dbContext.Tournament.Remove(tournament);
+            await dbContext.SaveChangesAsync();
+            showDeleteModal = false;
+            NavigationManager.NavigateTo("/tournaments");
+        }
+    }
+
+    private void GenerateShareLink()
+    {
+        if (tournament != null)
+        {
+            var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+            shareUrl = $"{baseUrl}/tournaments/view/{tournament.Id}";
+            showShareModal = true;
+            linkCopied = false;
+        }
+    }
+
+    private async Task CopyShareLink()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
+        linkCopied = true;
+    }
+
+    public void Dispose()
+    {
+        // Make sure to dispose the context when the component is disposed
+        dbContext?.Dispose();
+    }
+}

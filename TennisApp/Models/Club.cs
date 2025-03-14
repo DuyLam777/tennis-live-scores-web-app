@@ -1,7 +1,7 @@
-
 using System.ComponentModel.DataAnnotations;
 
 namespace TennisApp.Models;
+
 public class Club
 {
     public int Id { get; set; }
@@ -11,5 +11,4 @@ public class Club
     public string? Name { get; set; }
 
     public List<Player> Players { get; set; } = [];
-
 }

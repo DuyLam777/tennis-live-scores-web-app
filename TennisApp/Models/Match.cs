@@ -40,10 +40,16 @@ namespace TennisApp.Models
         [Required(ErrorMessage = "Scoreboard is required!")]
         public int ScoreboardId { get; set; }
 
+        // Navigation property for Tournament
+        public Tournament? Tournament { get; set; }
+
+        // Foreign key for Tournament (nullable because matches can exist outside tournaments)
+        public int? TournamentId { get; set; }
+
         // Optional: List of sets (not used in the form)
         public List<Set> Sets { get; set; } = [];
 
-        // Computed property (for the index page)
+        // Computed properties (for the index page)
         public string CourtName => Court?.Name ?? "N/A";
         public string Player1Name => Player1?.Name ?? "N/A";
         public string Player2Name => Player2?.Name ?? "N/A";
