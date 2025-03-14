@@ -81,7 +81,7 @@ namespace TennisApp.Controllers
 
             try
             {
-                // Save the changes
+                _context.Entry(existingClub).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
