@@ -689,8 +689,9 @@ textarea.form-control:focus {
     min-height: 100vh;
 }
 
-.input-group > .form-control {
-    background-color: var(--background);
+main {
+    flex: 1;
+    padding-top: 0; /* Remove default padding */
 }
 
 .content {
