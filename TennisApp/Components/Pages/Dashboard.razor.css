@@ -1,0 +1,364 @@
+/* Dashboard container styles */
+.page-container {
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+.header {
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    font-size: 2.2rem;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.dashboard-section {
+    background-color: var(--overlay);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-section h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+/* Carousel container and controls */
+.carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+.carousel {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    padding: 0.5rem 0; /* Add padding to the carousel container */
+}
+
+.cards-wrapper {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 350px; /* Increased from 320px to make cards wider */
+    gap: 2rem; /* Increased from 1.5rem for more spacing between cards */
+    width: max-content;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 1rem 0.5rem; /* Add padding around the cards */
+}
+
+.carousel-control {
+    position: relative;
+    z-index: 5;
+    background-color: var(--surface);
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.carousel-control:hover {
+    background-color: var(--primary);
+    color: var(--surface);
+    transform: scale(1.1);
+}
+
+.carousel-control span {
+    display: block;
+    line-height: 1;
+}
+
+/* Match card styles */
+.match-card {
+    background-color: var(--surface);
+    border-radius: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    border: 2px solid var(--overlay);
+    width: 350px; /* Increased from 320px to match grid-auto-columns */
+    margin: 0.5rem; /* Add margin around each card */
+}
+
+.match-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.match-card.ongoing {
+    border-color: var(--primary);
+}
+
+.match-card.upcoming {
+    border-color: var(--tertiary);
+}
+
+.match-card.completed {
+    border-color: var(--success);
+}
+
+.match-card-header {
+    background-color: var(--overlay);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.match-time {
+    font-weight: 600;
+    color: var(--tertiary);
+}
+
+.match-location {
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.player {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+}
+
+.player-top {
+    border-bottom: 1px solid var(--overlay);
+    background-color: var(--surface);
+}
+
+.player-bottom {
+    background-color: var(--surface);
+}
+
+.player.winner {
+    background-color: rgba(166, 227, 161, 0.1); /* Light green background for winner */
+}
+
+.player.winner .player-name {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.player-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 210px; /* Increased from 150px to allow longer names */
+}
+
+.player-country {
+    color: var(--text);
+    opacity: 0.8;
+    font-size: 0.85rem;
+}
+
+.player-score {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.set-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--overlay);
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.match-vs {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background-color: var(--overlay);
+    color: var(--secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    z-index: 2;
+    font-size: 0.9rem;
+    box-shadow: 0 0 0 4px var(--surface);
+}
+
+.match-footer {
+    padding: 0.75rem 1rem;
+    background-color: var(--overlay);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.match-status {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.completed-status {
+    color: var(--success);
+}
+
+.match-duration {
+    color: var(--text);
+    opacity: 0.8;
+}
+
+.status-live {
+    color: var(--danger);
+    font-weight: 700;
+    position: relative;
+    padding-left: 0.8rem;
+}
+
+.status-live::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background-color: var(--danger);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+.match-countdown {
+    color: var(--tertiary);
+    font-weight: 600;
+}
+
+.match-court-type {
+    color: var(--text);
+    opacity: 0.8;
+}
+
+.match-sets {
+    color: var(--text);
+    opacity: 0.8;
+}
+
+/* Pagination indicator */
+.pagination-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.page-dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--overlay);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.page-dot.active {
+    background-color: var(--primary);
+    transform: scale(1.2);
+}
+
+/* Animation for live indicator */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Animation for card transition */
+@keyframes cardSlide {
+    from { transform: translateX(100px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Enhanced transform transition for carousel */
+.cards-wrapper {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 350px; /* Increased from 320px to make cards wider */
+    gap: 2rem; /* Increased from 1.5rem for more spacing between cards */
+    width: max-content;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .match-card {
+        width: 350px; /* Keep consistent with the new wider width */
+    }
+}
+
+@media (max-width: 992px) {
+    .match-card {
+        width: 350px; /* Keep consistent with the new wider width */
+    }
+}
+
+@media (max-width: 768px) {
+    .page-container {
+        padding: 1rem;
+    }
+    
+    .match-card {
+        width: 100%;
+    }
+    
+    .carousel-control {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+}
+
+/* When no matches are available */
+.dashboard-section p {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text);
+    opacity: 0.7;
+}
+
+.page-dot {
+    background-color: var(--text);
+}
