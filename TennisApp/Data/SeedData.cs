@@ -400,6 +400,8 @@ namespace TennisApp.Data
                     Status = TournamentStatus.Completed,
                     MaxParticipants = 24,
                     Type = TournamentType.Singles,
+                    WinnerId = players[0].Id,
+                    Winner = players[0],
                 },
                 new Tournament
                 {
@@ -410,7 +412,7 @@ namespace TennisApp.Data
                     HostId = clubs[3].Id,
                     Description = "Ongoing prestigious tournament",
                     Status = TournamentStatus.Ongoing,
-                    MaxParticipants = 16,
+                    MaxParticipants = 24,
                     Type = TournamentType.Singles,
                 },
             };
@@ -765,22 +767,6 @@ namespace TennisApp.Data
             };
             matches.Add(upcomingMatch10);
 
-            // ABOUT TO START (match starting in 5 minutes)
-            var aboutToStartMatch = new Match
-            {
-                Court = courts[1], // Court 2
-                CourtId = courts[1].Id,
-                MatchTime = now.AddMinutes(5), // Starting in 5 minutes
-                Player1 = players[7], // Olivia Brown
-                Player1Id = players[7].Id,
-                Player2 = players[19], // Priya Sharma
-                Player2Id = players[19].Id,
-                Scoreboard = scoreboards[5],
-                ScoreboardId = scoreboards[5].Id,
-                TournamentId = tournaments[3].Id, // Summer Open (ongoing)
-            };
-            matches.Add(aboutToStartMatch);
-
             context.Match.AddRange(matches);
             context.SaveChanges(); // Save matches to generate IDs
 
@@ -795,7 +781,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[0].Id, // John Doe's ID
+                WinnerId = 1,
             };
             context.Set.Add(pastMatch1Set1);
 
@@ -808,7 +794,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = players[0].Id, // John Doe's ID
+                WinnerId = 1,
             };
             context.Set.Add(pastMatch1Set2);
 
@@ -818,7 +804,7 @@ namespace TennisApp.Data
                 PointsPlayer1 = new List<string> { "15", "30", "40" },
                 PointsPlayer2 = new List<string> { "0", "15", "30" },
                 IsCompleted = true,
-                WinnerId = players[0].Id, // John Doe's ID
+                WinnerId = 1,
             };
             pastMatch1Set1.Games.Add(pastMatch1Set1Game1);
 
@@ -832,7 +818,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = players[1].Id, // Jane Smith's ID
+                WinnerId = 1,
             };
             context.Set.Add(pastMatch2Set1);
 
@@ -845,7 +831,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[3].Id, // Emma Williams's ID
+                WinnerId = 2,
             };
             context.Set.Add(pastMatch2Set2);
 
@@ -858,7 +844,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[1].Id, // Jane Smith's ID
+                WinnerId = 1,
             };
             context.Set.Add(pastMatch2Set3);
 
@@ -872,7 +858,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[6].Id, // Alexander Miller's ID
+                WinnerId = 2,
             };
             context.Set.Add(pastMatch3Set1);
 
@@ -885,7 +871,7 @@ namespace TennisApp.Data
                 Player1Games = 2,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[6].Id, // Alexander Miller's ID
+                WinnerId = 2,
             };
             context.Set.Add(pastMatch3Set2);
 
@@ -900,7 +886,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[0].Id, // John Doe's ID
+                WinnerId = 1,
             };
             context.Set.Add(ongoingMatch1Set1);
 
@@ -913,7 +899,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[4].Id, // Carlos Rodriguez's ID
+                WinnerId = 2,
             };
             context.Set.Add(ongoingMatch1Set2);
 
@@ -987,7 +973,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = players[9].Id, // Naomi Tanaka's ID
+                WinnerId = 1,
             };
             context.Set.Add(ongoingMatch4Set1);
 
@@ -1040,7 +1026,7 @@ namespace TennisApp.Data
                 Player1Games = 7,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[13].Id, // Ana Costa's ID
+                WinnerId = 1,
             };
             context.Set.Add(ongoingMatch6Set1);
 
@@ -1053,7 +1039,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[17].Id, // Serena Davis's ID
+                WinnerId = 2,
             };
             context.Set.Add(ongoingMatch6Set2);
 
@@ -1086,7 +1072,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = players[14].Id, // Felix Hansen's ID
+                WinnerId = 1,
             };
             context.Set.Add(ongoingMatch7Set1);
 
