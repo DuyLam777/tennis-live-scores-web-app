@@ -300,6 +300,7 @@ a,
 
 .progress-bar.bg-success {
     background-color: var(--success);
+    color: var(--background);
 }
 
 /* Toast notification styles */
@@ -353,7 +354,7 @@ a,
     color: var(--text);
 }
 
-/* Form styling */
+/* Form styling - consolidated rules */
 .form-control,
 .form-select {
     background-color: var(--surface);
@@ -361,11 +362,43 @@ a,
     color: var(--text);
 }
 
+/* Focus states for all form inputs, selects, and textareas */
 .form-control:focus,
-.form-select:focus {
-    background-color: var(--surface);
+.form-select:focus,
+input.form-control:focus,
+select.form-select:focus,
+textarea.form-control:focus,
+.input-group>.form-control:focus {
+    color: var(--text) !important;
+    background-color: var(--surface) !important;
     border-color: var(--primary);
     box-shadow: 0 0 0 0.25rem rgba(137, 180, 250, 0.25);
+}
+
+/* Active and selected states for dropdowns */
+.form-select:active,
+.form-select option,
+.form-select option:checked {
+    color: var(--text) !important;
+    background-color: var(--surface) !important;
+}
+
+/* Override for dropdown option hover */
+.form-select option:hover,
+.form-select option:focus {
+    background-color: var(--overlay) !important;
+    color: var(--text) !important;
+}
+
+/* Input placeholder color */
+::placeholder {
+    color: rgba(205, 214, 244, 0.5) !important;
+}
+
+/* Readonly inputs */
+.form-control[readonly] {
+    background-color: var(--surface);
+    color: var(--text);
 }
 
 /* Form validation styles */
@@ -379,11 +412,6 @@ a,
 
 .validation-message {
     color: var(--danger);
-}
-
-/* Input placeholder color */
-::placeholder {
-    color: rgba(205, 214, 244, 0.5);
 }
 
 /* Focus styles */
@@ -662,25 +690,9 @@ nav.flex-column {
     color: var(--text);
 }
 
-.input-group > .form-control {
+.input-group>.form-control {
     background-color: var(--background);
 }
-
-/* Style for all input elements */
-input.form-control,
-select.form-select,
-textarea.form-control {
-    color: var(--bs-body-color) !important;
-}
-
-/* Optional: Style for focused input */
-input.form-control:focus,
-select.form-select:focus,
-textarea.form-control:focus {
-    color: var(--bs-body-color) !important;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
 
 /* This is for the navbar */
 .page {
@@ -691,33 +703,11 @@ textarea.form-control:focus {
 
 main {
     flex: 1;
-    padding-top: 0; /* Remove default padding */
+    padding-top: 0;
+    /* Remove default padding */
 }
 
 .content {
-    padding-top: 2rem; /* Add space below navbar */
-}
-
-/* Change the color of the table header */
-.col-title-text {
-    color: var(--text);
-}
-
-.input-group > .form-control {
-    background-color: var(--background);
-}
-
-/* Style for all input elements */
-input.form-control,
-select.form-select,
-textarea.form-control {
-    color: var(--bs-body-color) !important;
-}
-
-/* Optional: Style for focused input */
-input.form-control:focus,
-select.form-select:focus,
-textarea.form-control:focus {
-    color: var(--bs-body-color) !important;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    padding-top: 2rem;
+    /* Add space below navbar */
 }

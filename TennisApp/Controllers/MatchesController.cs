@@ -16,7 +16,6 @@ namespace TennisApp.Controllers
         private readonly TennisAppContext _context;
         private readonly ILogger<MatchesController> _logger;
         private readonly IWebSocketHandler _webSocketHandler;
-        private readonly JsonSerializerOptions _jsonOptions;
 
         public MatchesController(
             TennisAppContext context,
@@ -27,18 +26,10 @@ namespace TennisApp.Controllers
             _context = context;
             _logger = logger;
             _webSocketHandler = webSocketHandler;
-
-            // Configure JSON serializer to handle circular references
-            _jsonOptions = new JsonSerializerOptions
-            {
-                ReferenceHandler = ReferenceHandler.Preserve,
-                WriteIndented = true,
-                MaxDepth = 64,
-            };
         }
 
         [HttpPost]
-        public async Task<ActionResult<object>> CreateMatch(
+        public async Task<ActionResult<MatchDto>> CreateMatch(
             [FromBody] CreateMatchDto createMatchDto
         )
         {
@@ -57,6 +48,25 @@ namespace TennisApp.Controllers
                     return NotFound("One or more related entities not found");
                 }
 
+                // If TournamentId is provided, validate it exists
+                Tournament? tournament = null;
+                if (createMatchDto.TournamentId.HasValue)
+                {
+                    tournament = await _context.Tournament.FindAsync(
+                        createMatchDto.TournamentId.Value
+                    );
+                    if (tournament == null)
+                    {
+                        _logger.LogWarning(
+                            "Tournament not found: {TournamentId}",
+                            createMatchDto.TournamentId.Value
+                        );
+                        return NotFound(
+                            $"Tournament with ID {createMatchDto.TournamentId.Value} not found"
+                        );
+                    }
+                }
+
                 // Mark the court as occupied
                 court.IsOccupied = true;
 
@@ -67,6 +77,7 @@ namespace TennisApp.Controllers
                     Player1 = player1,
                     Player2 = player2,
                     Scoreboard = scoreboard,
+                    TournamentId = createMatchDto.TournamentId, // Associate with tournament if specified
                 };
 
                 // Create an initial set for the match
@@ -92,20 +103,22 @@ namespace TennisApp.Controllers
 
                 _logger.LogInformation("Match created successfully with ID: {ID}", match.Id);
 
-                // Return a simplified DTO instead of the entity with circular references
-                return CreatedAtAction(
-                    nameof(GetMatch),
-                    new { id = match.Id },
-                    new
-                    {
-                        Id = match.Id,
-                        MatchTime = match.MatchTime,
-                        Player1Id = match.Player1Id,
-                        Player2Id = match.Player2Id,
-                        CourtId = match.CourtId,
-                        ScoreboardId = match.ScoreboardId,
-                    }
-                );
+                // Return a DTO instead of the entity with circular references
+                var matchDto = new MatchDto
+                {
+                    Id = match.Id,
+                    CourtId = match.CourtId,
+                    CourtName = court.Name,
+                    MatchTime = match.MatchTime,
+                    Player1Id = match.Player1Id,
+                    Player1Name = player1.Name,
+                    Player2Id = match.Player2Id,
+                    Player2Name = player2.Name,
+                    ScoreboardId = match.ScoreboardId,
+                    TournamentId = match.TournamentId,
+                };
+
+                return CreatedAtAction(nameof(GetMatch), new { id = match.Id }, matchDto);
             }
             catch (Exception ex)
             {
@@ -115,7 +128,7 @@ namespace TennisApp.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<object>> GetMatch(int id)
+        public async Task<ActionResult<MatchDetailDto>> GetMatch(int id)
         {
             var match = await _context
                 .Match.Include(m => m.Court)
@@ -131,43 +144,35 @@ namespace TennisApp.Controllers
                 return NotFound();
             }
 
-            // Create a simplified response with no circular references
-            var matchData = new
+            // Create a DTO with no circular references
+            var matchDto = new MatchDetailDto
             {
                 Id = match.Id,
                 MatchTime = match.MatchTime,
-                Court = match.Court != null
-                    ? new
-                    {
-                        Id = match.Court.Id,
-                        Name = match.Court.Name,
-                        IsOccupied = match.Court.IsOccupied,
-                        IsIndoor = match.Court.IsIndoor,
-                    }
-                    : null,
-                Player1 = match.Player1 != null
-                    ? new { Id = match.Player1.Id, Name = match.Player1.Name }
-                    : null,
-                Player2 = match.Player2 != null
-                    ? new { Id = match.Player2.Id, Name = match.Player2.Name }
-                    : null,
-                Scoreboard = match.Scoreboard != null ? new { Id = match.Scoreboard.Id } : null,
+                CourtId = match.CourtId,
+                CourtName = match.Court?.Name,
+                IsIndoor = match.Court?.IsIndoor ?? false,
+                Player1Id = match.Player1Id,
+                Player1Name = match.Player1?.Name,
+                Player2Id = match.Player2Id,
+                Player2Name = match.Player2?.Name,
+                ScoreboardId = match.ScoreboardId,
+                TournamentId = match.TournamentId,
                 Sets = match
-                    .Sets.Select(s => new
+                    .Sets.Select(s => new SetDto
                     {
                         Id = s.Id,
                         SetNumber = s.SetNumber,
-                        Player1Games = s.Player1Games,
-                        Player2Games = s.Player2Games,
+                        Player1Games = s.Player1Games ?? 0,
+                        Player2Games = s.Player2Games ?? 0,
                         IsCompleted = s.IsCompleted,
                         WinnerId = s.WinnerId,
-                        StartTime = s.StartTime,
+                        StartTime = s.StartTime ?? default(DateTime),
                         EndTime = s.EndTime,
                         Games = s
-                            .Games.Select(g => new
+                            .Games.Select(g => new GameDto
                             {
                                 Id = g.Id,
-                                // Remove GameNumber property as it doesn't exist in your Game class
                                 IsCompleted = g.IsCompleted,
                                 WinnerId = g.WinnerId,
                             })
@@ -176,45 +181,115 @@ namespace TennisApp.Controllers
                     .ToList(),
             };
 
-            // return matchData;  // if this causes problems revert since I need the second for the tests.
-            // I could not get the test to pass otherwise, if this causes a problem remove the test.
-            return Ok(matchData);
+            return matchDto;
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMatch(int id, Match match)
+        public async Task<IActionResult> UpdateMatch(int id, UpdateMatchDto updateMatchDto)
         {
-            if (id != match.Id)
+            if (id != updateMatchDto.Id)
             {
                 return BadRequest();
             }
 
-            // Check if this match is completed (all sets completed)
-            bool isMatchCompleted = match.Sets.Count > 0 && match.Sets.All(s => s.IsCompleted);
-
-            // Get the existing match to check for status changes
-            var existingMatch = await _context
-                .Match.AsNoTracking()
-                .Include(m => m.Sets)
+            // Get the existing match
+            var match = await _context
+                .Match.Include(m => m.Sets)
+                .ThenInclude(s => s.Games)
                 .Include(m => m.Court)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (existingMatch == null)
+            if (match == null)
             {
                 return NotFound();
             }
 
-            // Check if existing match was NOT completed and new match IS completed
-            bool matchJustCompleted =
-                !existingMatch.Sets.All(s => s.IsCompleted) && isMatchCompleted;
+            // Check if this match is completed (all sets completed)
+            bool wasMatchCompleted = match.Sets.Count > 0 && match.Sets.All(s => s.IsCompleted);
 
-            // Or if the court has changed
-            bool courtChanged = existingMatch.CourtId != match.CourtId;
+            // Check if court has changed
+            bool courtChanged = match.CourtId != updateMatchDto.CourtId;
 
             try
             {
+                // Update basic match properties
+                match.MatchTime = updateMatchDto.MatchTime;
+                match.Player1Id = updateMatchDto.Player1Id;
+                match.Player2Id = updateMatchDto.Player2Id;
+
+                // If court changed, update occupation status on both old and new courts
+                if (courtChanged)
+                {
+                    // Free up the old court
+                    var oldCourt = await _context.Court.FindAsync(match.CourtId);
+                    if (oldCourt != null)
+                    {
+                        oldCourt.IsOccupied = false;
+                        _context.Entry(oldCourt).State = EntityState.Modified;
+                    }
+
+                    // Mark the new court as occupied
+                    var newCourt = await _context.Court.FindAsync(updateMatchDto.CourtId);
+                    if (newCourt != null)
+                    {
+                        newCourt.IsOccupied = true;
+                        _context.Entry(newCourt).State = EntityState.Modified;
+                    }
+
+                    match.CourtId = updateMatchDto.CourtId;
+                }
+
+                // Update the sets based on the DTO
+                if (updateMatchDto.Sets != null)
+                {
+                    // Handle updates or additions of sets
+                    foreach (var setDto in updateMatchDto.Sets)
+                    {
+                        var existingSet = match.Sets.FirstOrDefault(s => s.Id == setDto.Id);
+
+                        if (existingSet != null)
+                        {
+                            // Update existing set
+                            existingSet.Player1Games = setDto.Player1Games;
+                            existingSet.Player2Games = setDto.Player2Games;
+                            existingSet.IsCompleted = setDto.IsCompleted;
+                            existingSet.WinnerId = setDto.WinnerId;
+                            existingSet.EndTime =
+                                setDto.IsCompleted && !existingSet.IsCompleted
+                                    ? DateTime.UtcNow
+                                    : existingSet.EndTime;
+
+                            // Update games if provided
+                            if (setDto.Games != null)
+                            {
+                                foreach (var gameDto in setDto.Games)
+                                {
+                                    var existingGame = existingSet.Games.FirstOrDefault(g =>
+                                        g.Id == gameDto.Id
+                                    );
+
+                                    if (existingGame != null)
+                                    {
+                                        // Update existing game
+                                        existingGame.IsCompleted = gameDto.IsCompleted;
+                                        // Fix for nullable WinnerId
+                                        if (gameDto.WinnerId.HasValue)
+                                        {
+                                            existingGame.WinnerId = gameDto.WinnerId.Value;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check if match is now completed (all sets completed)
+                bool isMatchNowCompleted =
+                    match.Sets.Count > 0 && match.Sets.All(s => s.IsCompleted);
+
                 // If match just completed, free up the court
-                if (matchJustCompleted)
+                if (!wasMatchCompleted && isMatchNowCompleted)
                 {
                     var court = await _context.Court.FindAsync(match.CourtId);
                     if (court != null)
@@ -223,43 +298,11 @@ namespace TennisApp.Controllers
                         _context.Entry(court).State = EntityState.Modified;
                     }
                 }
-                // If court changed, update occupation status on both old and new courts
-                else if (courtChanged)
-                {
-                    // Free up the old court
-                    var oldCourt = await _context.Court.FindAsync(existingMatch.CourtId);
-                    if (oldCourt != null)
-                    {
-                        oldCourt.IsOccupied = false;
-                        _context.Entry(oldCourt).State = EntityState.Modified;
-                    }
-
-                    // Mark the new court as occupied
-                    var newCourt = await _context.Court.FindAsync(match.CourtId);
-                    if (newCourt != null)
-                    {
-                        newCourt.IsOccupied = true;
-                        _context.Entry(newCourt).State = EntityState.Modified;
-                    }
-                }
-
-                // Update the match
-                _context.Entry(match).State = EntityState.Modified;
-
-                // For sets and games, we need special handling since they're collections
-                // This approach assumes the complete match object is sent in the update
-                _context.Set.RemoveRange(_context.Set.Where(s => s.Match!.Id == id));
-
-                foreach (var set in match.Sets)
-                {
-                    set.Match = match;
-                    _context.Set.Add(set);
-                }
 
                 await _context.SaveChangesAsync();
 
                 // Broadcast court availability updates if match completion or court change affected courts
-                if (matchJustCompleted || courtChanged)
+                if ((wasMatchCompleted != isMatchNowCompleted) || courtChanged)
                 {
                     await _webSocketHandler.BroadcastCourtAvailabilityAsync();
                 }
@@ -285,6 +328,7 @@ namespace TennisApp.Controllers
             var match = await _context
                 .Match.Include(m => m.Court)
                 .Include(m => m.Sets)
+                .ThenInclude(s => s.Games)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (match == null)
@@ -300,7 +344,11 @@ namespace TennisApp.Controllers
                 match.Court.IsOccupied = false;
             }
 
-            // Remove all sets associated with this match
+            // Remove all games and sets associated with this match
+            foreach (var set in match.Sets)
+            {
+                _context.Game.RemoveRange(set.Games);
+            }
             _context.Set.RemoveRange(match.Sets);
 
             // Remove the match
@@ -318,7 +366,7 @@ namespace TennisApp.Controllers
 
         // Add endpoint for adding a new set to a match
         [HttpPost("{matchId}/sets")]
-        public async Task<ActionResult<object>> AddSetToMatch(int matchId)
+        public async Task<ActionResult<SetDto>> AddSetToMatch(int matchId)
         {
             var match = await _context
                 .Match.Include(m => m.Sets)
@@ -348,17 +396,27 @@ namespace TennisApp.Controllers
             await _context.SaveChangesAsync();
 
             // Return a DTO without circular references
-            var setData = new
+            var setDto = new SetDto
             {
                 Id = newSet.Id,
                 SetNumber = newSet.SetNumber,
-                Player1Games = newSet.Player1Games,
-                Player2Games = newSet.Player2Games,
+                Player1Games = newSet.Player1Games ?? 0,
+                Player2Games = newSet.Player2Games ?? 0,
                 IsCompleted = newSet.IsCompleted,
-                StartTime = newSet.StartTime,
+                WinnerId = newSet.WinnerId,
+                StartTime = newSet.StartTime ?? default(DateTime),
+                EndTime = newSet.EndTime,
+                Games = newSet
+                    .Games.Select(g => new GameDto
+                    {
+                        Id = g.Id,
+                        IsCompleted = g.IsCompleted,
+                        WinnerId = g.WinnerId,
+                    })
+                    .ToList(),
             };
 
-            return Ok(setData);
+            return Ok(setDto);
         }
 
         [HttpPut("complete/{id}")]

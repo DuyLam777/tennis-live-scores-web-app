@@ -5,22 +5,30 @@
 @inject IJSRuntime JSRuntime
 @using System.Net.Http.Json
 @using TennisApp.Models
+@using TennisApp.DTOs
+@using System.Text.Json
+@using System.Text.Json.Serialization
 
 <PageTitle>Tournament Details</PageTitle>
 
 @if (isLoading)
 {
-    <p><em>Loading...</em></p>
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 }
 else if (tournament == null)
 {
-    <div class="alert alert-danger">Tournament not found.</div>
-    <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
-}
-else if (errorMessage != null)
-{
-    <div class="alert alert-danger">@errorMessage</div>
-    <a href="/tournaments" class="btn btn-primary">Back to Tournaments</a>
+    <div class="alert alert-danger">
+        <h4>Tournament not found.</h4>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p>@errorMessage</p>
+        }
+        <a href="/tournaments" class="btn btn-primary mt-3">Back to Tournaments</a>
+    </div>
 }
 else
 {
@@ -56,7 +64,7 @@ else
                             <div class="col-md-6">
                                 <dl>
                                     <dt>Host Club</dt>
-                                    <dd>@(tournament.Host?.Name ?? "N/A")</dd>
+                                    <dd>@(tournament.HostName ?? "N/A")</dd>
 
                                     <dt>Status</dt>
                                     <dd>
@@ -70,6 +78,21 @@ else
 
                                     <dt>Maximum Participants</dt>
                                     <dd>@(tournament.MaxParticipants?.ToString() ?? "No limit")</dd>
+                                    
+                                    <dt>Winner</dt>
+                                    <dd>
+                                        @if (tournament.WinnerId.HasValue)
+                                        {
+                                            <span class="text-success fw-bold">
+                                                @tournament.WinnerName
+                                                <i class="bi bi-trophy-fill text-warning ms-1"></i>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not determined yet</span>
+                                        }
+                                    </dd>
                                 </dl>
                             </div>
                         </div>
@@ -92,7 +115,7 @@ else
                         </a>
                     </div>
                     <div class="card-body">
-                        @if (!tournament.Matches.Any())
+                        @if (tournament.Matches == null || !tournament.Matches.Any())
                         {
                             <div class="alert alert-info">No matches have been added to this tournament yet.</div>
                         }
@@ -113,9 +136,9 @@ else
                                         @foreach (var match in tournament.Matches)
                                         {
                                             <tr>
-                                                <td>@(match.Court?.Name ?? "N/A")</td>
-                                                <td>@(match.Player1?.Name ?? "N/A")</td>
-                                                <td>@(match.Player2?.Name ?? "N/A")</td>
+                                                <td>@(match.CourtName ?? "N/A")</td>
+                                                <td>@(match.Player1Name ?? "N/A")</td>
+                                                <td>@(match.Player2Name ?? "N/A")</td>
                                                 <td>@match.MatchTime.ToString("g")</td>
                                                 <td>
                                                     <a href="/matches/details/@match.Id" class="btn btn-sm btn-info">
@@ -140,12 +163,12 @@ else
                     <div class="card-body">
                         <div class="d-flex justify-content-center mb-3">
                             <div class="text-center">
-                                <div class="display-4">@tournament.RegisteredCount</div>
+                                <div class="display-4">@GetRegisteredCount()</div>
                                 <div>Participants</div>
                             </div>
                             <div class="border-end mx-4"></div>
                             <div class="text-center">
-                                <div class="display-4">@tournament.Matches.Count</div>
+                                <div class="display-4">@(tournament.Matches?.Count ?? 0)</div>
                                 <div>Matches</div>
                             </div>
                         </div>
@@ -153,13 +176,13 @@ else
                         @if (tournament.MaxParticipants.HasValue)
                         {
                             <div class="mt-3">
-                                <h6>Registration Status</h6>
+                                <h6>Tournament Capacity</h6>
                                 <div class="progress">
                                     <div class="progress-bar bg-success" role="progressbar"
-                                        style="width: @(Math.Min(100, tournament.RegisteredCount * 100 / tournament.MaxParticipants.Value))%"
-                                        aria-valuenow="@tournament.RegisteredCount" aria-valuemin="0"
+                                        style="width: @(Math.Min(100, GetRegisteredCount() * 100 / tournament.MaxParticipants.Value))%"
+                                        aria-valuenow="@GetRegisteredCount()" aria-valuemin="0"
                                         aria-valuemax="@tournament.MaxParticipants">
-                                        @tournament.RegisteredCount / @tournament.MaxParticipants
+                                        @GetRegisteredCount() / @tournament.MaxParticipants
                                     </div>
                                 </div>
                             </div>
@@ -182,6 +205,12 @@ else
                             <button class="btn btn-warning" @onclick="() => showStatusModal = true">
                                 <i class="bi bi-clock"></i> Update Status
                             </button>
+                            @if (tournament.Status == TournamentStatus.Completed)
+                            {
+                                <button class="btn btn-primary" @onclick="() => showWinnerModal = true">
+                                    <i class="bi bi-trophy"></i> @(tournament.WinnerId.HasValue ? "Update Winner" : "Set Winner")
+                                </button>
+                            }
                             <button class="btn btn-danger" @onclick="() => showDeleteModal = true">
                                 <i class="bi bi-trash"></i> Delete Tournament
                             </button>
@@ -235,7 +264,7 @@ else
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete the tournament "@tournament.Name"?</p>
-                    @if (tournament.Matches.Count > 0)
+                    @if (tournament.Matches != null && tournament.Matches.Any())
                     {
                         <div class="alert alert-warning">
                             This tournament has @tournament.Matches.Count associated matches that will also be deleted.
@@ -282,18 +311,51 @@ else
     </div>
 }
 
+@if (showWinnerModal && tournament != null)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(tournament.WinnerId.HasValue ? "Update Tournament Winner" : "Set Tournament Winner")</h5>
+                    <button type="button" class="btn-close" @onclick="() => showWinnerModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tournament Winner</label>
+                        <select class="form-select" @bind="newWinnerId">
+                            <option value="">-- Select Winner --</option>
+                            @foreach (var player in GetParticipants())
+                            {
+                                <option value="@player.Id">@player.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showWinnerModal = false">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmWinnerUpdate">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public int Id { get; set; }
 
-    private Tournament? tournament;
+    private TournamentDetailDto? tournament;
     private bool isLoading = true;
     private bool showStatusModal = false;
     private bool showDeleteModal = false;
     private bool showShareModal = false;
+    private bool showWinnerModal = false;
     private bool linkCopied = false;
     private string shareUrl = "";
     private TournamentStatus newStatus;
+    private int? newWinnerId;
     private ElementReference shareUrlInput;
     private string? errorMessage;
 
@@ -314,20 +376,205 @@ else
 
         try
         {
-            tournament = await HttpClient.GetFromJsonAsync<Tournament>($"api/Tournament/{Id}");
+            // Define custom JSON options with enum converter
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() },
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            // Load tournament details
+            tournament = await HttpClient.GetFromJsonAsync<TournamentDetailDto>($"api/Tournament/{Id}", options);
+
             if (tournament != null)
             {
+                // Initialize matches list if null
+                if (tournament.Matches == null)
+                {
+                    tournament.Matches = new List<MatchDto>();
+                }
+
+                // Set the tournament status and winner for the modals
                 newStatus = tournament.Status;
+                newWinnerId = tournament.WinnerId;
+
+                // If there are no matches, try to load them separately
+                if (!tournament.Matches.Any())
+                {
+                    await LoadTournamentMatches();
+                }
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading tournament: {ex.Message}";
+            tournament = null;
+
+            // Try to load using manual approach as fallback
+            await LoadTournamentManually();
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    private async Task LoadTournamentManually()
+    {
+        try
+        {
+            // Make a direct API call without automatic deserialization
+            var response = await HttpClient.GetAsync($"api/Tournament/{Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Try to manually parse the JSON
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
+                var root = doc.RootElement;
+
+                tournament = new TournamentDetailDto
+                {
+                    Id = GetIntProperty(root, "id"),
+                    Name = GetStringProperty(root, "name"),
+                    StartDate = GetDateTimeProperty(root, "startDate"),
+                    EndDate = GetDateTimeProperty(root, "endDate"),
+                    HostId = GetIntProperty(root, "hostId"),
+                    HostName = GetStringProperty(root, "hostName"),
+                    Description = GetStringProperty(root, "description"),
+                    MaxParticipants = GetNullableIntProperty(root, "maxParticipants"),
+                    WinnerId = GetNullableIntProperty(root, "winnerId"),
+                    WinnerName = GetStringProperty(root, "winnerName"),
+                    Matches = new List<MatchDto>()
+                };
+
+                // Parse status enum
+                if (root.TryGetProperty("status", out var statusElement))
+                {
+                    if (statusElement.ValueKind == JsonValueKind.String)
+                    {
+                        if (Enum.TryParse<TournamentStatus>(statusElement.GetString(), out var statusEnum))
+                        {
+                            tournament.Status = statusEnum;
+                        }
+                    }
+                    else if (statusElement.ValueKind == JsonValueKind.Number)
+                    {
+                        tournament.Status = (TournamentStatus)statusElement.GetInt32();
+                    }
+                }
+
+                // Parse type enum
+                if (root.TryGetProperty("type", out var typeElement))
+                {
+                    if (typeElement.ValueKind == JsonValueKind.String)
+                    {
+                        if (Enum.TryParse<TournamentType>(typeElement.GetString(), out var typeEnum))
+                        {
+                            tournament.Type = typeEnum;
+                        }
+                    }
+                    else if (typeElement.ValueKind == JsonValueKind.Number)
+                    {
+                        tournament.Type = (TournamentType)typeElement.GetInt32();
+                    }
+                }
+
+                // Parse duration days or calculate
+                if (root.TryGetProperty("durationInDays", out var durationElement))
+                {
+                    tournament.DurationInDays = durationElement.GetInt32();
+                }
+                else
+                {
+                    tournament.DurationInDays = (tournament.EndDate - tournament.StartDate).Days + 1;
+                }
+
+                // Load matches in a separate call
+                await LoadTournamentMatches();
+
+                // Set the status and winner
+                newStatus = tournament.Status;
+                newWinnerId = tournament.WinnerId;
+            }
+        }
+        catch
+        {
+            // If still fails, keep error and null tournament
+        }
+    }
+
+    private async Task LoadTournamentMatches()
+    {
+        if (tournament == null) return;
+
+        try
+        {
+            // Make a separate API call to get the matches
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+
+            var matches = await HttpClient.GetFromJsonAsync<List<MatchDto>>($"api/Tournament/{Id}/Matches", options);
+
+            if (matches != null)
+            {
+                tournament.Matches = matches;
+            }
+        }
+        catch
+        {
+            // If loading matches fails, just use an empty list
+            tournament.Matches = new List<MatchDto>();
+        }
+    }
+
+    // Helper methods for safe JSON property extraction
+    private string GetStringProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) &&
+        property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetString() ?? string.Empty;
+        }
+        return string.Empty;
+    }
+
+    private int GetIntProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) &&
+        property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetInt32();
+        }
+        return 0;
+    }
+
+    private int? GetNullableIntProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) &&
+        property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetInt32();
+        }
+        return null;
+    }
+
+    private DateTime GetDateTimeProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) &&
+        property.ValueKind != JsonValueKind.Null)
+        {
+            if (property.TryGetDateTime(out var dateTime))
+            {
+                return dateTime;
+            }
+        }
+        return DateTime.Now; // Default value
     }
 
     private string GetStatusBadgeClass(TournamentStatus status)
@@ -342,14 +589,62 @@ else
         };
     }
 
+    private int GetRegisteredCount()
+    {
+        // Calculate the number of unique players from matches
+        if (tournament?.Matches == null || !tournament.Matches.Any())
+            return 0;
+
+        HashSet<int> playerIds = new HashSet<int>();
+        foreach (var match in tournament.Matches)
+        {
+            if (match.Player1Id > 0)
+                playerIds.Add(match.Player1Id);
+            if (match.Player2Id > 0)
+                playerIds.Add(match.Player2Id);
+        }
+
+        return playerIds.Count;
+    }
+
+    // Method to get unique participants from the matches
+    private List<PlayerDto> GetParticipants()
+    {
+        if (tournament?.Matches == null || !tournament.Matches.Any())
+            return new List<PlayerDto>();
+
+        var players = new Dictionary<int, PlayerDto>();
+
+        foreach (var match in tournament.Matches)
+        {
+            if (match.Player1Id > 0 && !string.IsNullOrEmpty(match.Player1Name) && !players.ContainsKey(match.Player1Id))
+            {
+                players.Add(match.Player1Id, new PlayerDto { Id = match.Player1Id, Name = match.Player1Name });
+            }
+
+            if (match.Player2Id > 0 && !string.IsNullOrEmpty(match.Player2Name) && !players.ContainsKey(match.Player2Id))
+            {
+                players.Add(match.Player2Id, new PlayerDto { Id = match.Player2Id, Name = match.Player2Name });
+            }
+        }
+
+        return players.Values.OrderBy(p => p.Name).ToList();
+    }
+
     private async Task ConfirmStatusUpdate()
     {
         if (tournament != null)
         {
             try
             {
+                // Create a DTO for the status update
+                var updateDto = new UpdateTournamentStatusDto
+                {
+                    Status = newStatus
+                };
+
                 // Use the UpdateStatus API endpoint
-                var response = await HttpClient.PutAsJsonAsync($"api/Tournament/{Id}/UpdateStatus", newStatus);
+                var response = await HttpClient.PutAsJsonAsync($"api/Tournament/{Id}/UpdateStatus", updateDto);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -366,6 +661,52 @@ else
             catch (Exception ex)
             {
                 errorMessage = $"Error updating status: {ex.Message}";
+            }
+        }
+    }
+
+    private async Task ConfirmWinnerUpdate()
+    {
+        if (tournament != null)
+        {
+            try
+            {
+                // Create a DTO for the winner update
+                var updateDto = new UpdateTournamentWinnerDto
+                {
+                    WinnerId = newWinnerId
+                };
+
+                // Use the UpdateWinner API endpoint
+                var response = await HttpClient.PutAsJsonAsync($"api/Tournament/{Id}/UpdateWinner", updateDto);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Update local tournament object with new winner
+                    tournament.WinnerId = newWinnerId;
+
+                    // Find the player name if a winner is selected
+                    if (newWinnerId.HasValue)
+                    {
+                        var participant = GetParticipants().FirstOrDefault(p => p.Id == newWinnerId.Value);
+                        tournament.WinnerName = participant?.Name;
+                    }
+                    else
+                    {
+                        tournament.WinnerName = null;
+                    }
+
+                    showWinnerModal = false;
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    errorMessage = $"Error updating winner: {response.StatusCode} - {errorContent}";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error updating winner: {ex.Message}";
             }
         }
     }

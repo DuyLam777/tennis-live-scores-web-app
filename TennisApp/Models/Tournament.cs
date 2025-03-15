@@ -44,6 +44,10 @@ namespace TennisApp.Models
         [Required]
         public TournamentType Type { get; set; } = TournamentType.Singles;
 
+        // Winner information
+        public int? WinnerId { get; set; }
+        public Player? Winner { get; set; }
+
         // Computed property for number of registered players/teams
         [NotMapped]
         public int RegisteredCount =>
