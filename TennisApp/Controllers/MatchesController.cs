@@ -181,7 +181,9 @@ namespace TennisApp.Controllers
                     .ToList(),
             };
 
-            return matchDto;
+            // return matchData;  // if this causes problems revert since I need the second for the tests.
+            // I could not get the test to pass otherwise, if this causes a problem remove the test.
+            return Ok(matchData);
         }
 
         [HttpPut("{id}")]
