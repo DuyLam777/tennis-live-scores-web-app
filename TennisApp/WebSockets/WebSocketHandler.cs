@@ -274,7 +274,7 @@ namespace TennisApp.WebSockets
             await SendMessageToSocketAsync(socketId, "court_availability", courts);
         }
 
-        public async Task BroadcastCourtAvailabilityAsync()
+        public virtual async Task BroadcastCourtAvailabilityAsync()
         {
             _logger.LogInformation("Starting court availability broadcast");
 

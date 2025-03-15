@@ -68,9 +68,20 @@ namespace TennisApp.Controllers
                 return BadRequest(ModelState);
             }
 
+            // Fetch the existing entity from the database
+            var existingClub = await _context.Club.FindAsync(id);
+            if (existingClub == null)
+            {
+                return NotFound();
+            }
+
+            // Update the properties of the existing entity
+            existingClub.Name = club.Name;
+            existingClub.Players = club.Players;
+
             try
             {
-                _context.Entry(club).State = EntityState.Modified;
+                // Save the changes
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)

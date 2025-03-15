@@ -57,6 +57,30 @@ dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
+
+## Testing
+
+Commands used to setup testing:
+
+```
+dotnet new xunit -o TennisApp.Tests
+dotnet sln add TennisApp.Tests
+
+# add project to references
+cd TennisApp.Tests
+dotnet add reference ../TennisApp/TennisApp.csproj
+
+# installed dependencies
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
+dotnet add package xunit
+dotnet add package xunit.runner.visualstudio
+dotnet add package Moq
+dotnet add package coverlet.collector
+
+# to run tests:
+dotnet test
+```
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
