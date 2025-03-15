@@ -4,13 +4,20 @@
 @inject NavigationManager NavigationManager
 @using System.Net.Http.Json
 @using TennisApp.Models
+@using TennisApp.DTOs
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Text.Json
+@using System.Text.Json.Serialization
 
 <PageTitle>Edit Tournament</PageTitle>
 
 @if (isLoading)
 {
-    <p><em>Loading...</em></p>
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 }
 else if (tournament == null)
 {
@@ -131,12 +138,11 @@ else
                 <div class="card-body">
                     <p>This tournament has:</p>
                     <ul>
-                        <li><strong>@(tournament.Matches?.Count ?? 0)</strong> scheduled matches</li>
-                        <li><strong>@tournament.RegisteredCount</strong> registered participants</li>
+                        <li><strong>@(matchCount)</strong> scheduled matches</li>
+                        <li><strong>@registeredCount</strong> registered participants</li>
                     </ul>
 
-                    @if (tournament.MaxParticipants.HasValue && tournament.RegisteredCount >
-                                    tournament.MaxParticipants.Value)
+                    @if (tournament.MaxParticipants.HasValue && registeredCount > tournament.MaxParticipants.Value)
                     {
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle"></i> The number of participants exceeds the maximum limit.
@@ -161,10 +167,12 @@ else
     [Parameter]
     public int Id { get; set; }
 
-    private Tournament? tournament;
-    private List<Club> clubs = new();
+    private UpdateTournamentDto? tournament;
+    private List<ClubDto> clubs = new();
     private bool isLoading = true;
     private string? errorMessage;
+    private int matchCount = 0;
+    private int registeredCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,17 +180,41 @@ else
         await LoadTournament();
 
         // Load clubs for dropdown
+        await LoadClubs();
+    }
+
+    private async Task LoadClubs()
+    {
         try
         {
-            var clubResponse = await HttpClient.GetFromJsonAsync<List<Club>>("api/Club");
-            if (clubResponse != null)
+            // Define JSON options
+            var options = new JsonSerializerOptions
             {
-                clubs = clubResponse;
+                PropertyNameCaseInsensitive = true,
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            // Get clubs from API
+            var response = await HttpClient.GetAsync("api/Club");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var clubsResponse = JsonSerializer.Deserialize<List<ClubDto>>(content, options);
+
+                if (clubsResponse != null)
+                {
+                    clubs = clubsResponse;
+                }
+            }
+            else
+            {
+                errorMessage = $"Error loading clubs: {response.StatusCode}";
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading clubs: {ex.Message}";
+            Console.WriteLine($"Club loading error: {ex}");
         }
     }
 
@@ -192,15 +224,60 @@ else
 
         try
         {
-            // Get tournament from API
-            tournament = await HttpClient.GetFromJsonAsync<Tournament>($"api/Tournament/{Id}");
+            // Define JSON options with enum converter
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() },
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            // Get tournament from API as TournamentDetailDto first to get all details
+            var tournamentDetail = await HttpClient.GetFromJsonAsync<TournamentDetailDto>($"api/Tournament/{Id}", options);
+
+            if (tournamentDetail == null)
+            {
+                errorMessage = "Tournament not found";
+                return;
+            }
+
+            // Create the UpdateTournamentDto from the detail data
+            tournament = new UpdateTournamentDto
+            {
+                Id = tournamentDetail.Id,
+                Name = tournamentDetail.Name,
+                StartDate = tournamentDetail.StartDate,
+                EndDate = tournamentDetail.EndDate,
+                HostId = tournamentDetail.HostId,
+                Description = tournamentDetail.Description,
+                Status = tournamentDetail.Status,
+                Type = tournamentDetail.Type,
+                MaxParticipants = tournamentDetail.MaxParticipants
+            };
+
+            // Store match count and registered count for display
+            matchCount = tournamentDetail.Matches?.Count ?? 0;
+
+            // Calculate registered participants
+            if (tournamentDetail.Matches != null && tournamentDetail.Matches.Any())
+            {
+                HashSet<int> playerIds = new HashSet<int>();
+                foreach (var match in tournamentDetail.Matches)
+                {
+                    playerIds.Add(match.Player1Id);
+                    playerIds.Add(match.Player2Id);
+                }
+                registeredCount = playerIds.Count;
+            }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading tournament: {ex.Message}";
         }
-
-        isLoading = false;
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task HandleValidSubmit()
@@ -243,4 +320,4 @@ else
             errorMessage = $"Error updating tournament: {ex.Message}";
         }
     }
-}   
+}
