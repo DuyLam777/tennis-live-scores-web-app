@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TennisApp.Data;
@@ -11,47 +13,99 @@ namespace TennisApp.Controllers
     {
         private readonly TennisAppContext _context;
         private readonly ILogger<ClubController> _logger;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public ClubController(TennisAppContext context, ILogger<ClubController> logger)
         {
             _context = context;
             _logger = logger;
+
+            // Configure JSON serialization options to avoid reference handling metadata
+            _jsonOptions = new JsonSerializerOptions
+            {
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                WriteIndented = true,
+            };
         }
 
         // GET: api/Club
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Club>>> GetClubs()
         {
-            return await _context.Club.ToListAsync();
+            try
+            {
+                _logger.LogInformation("Fetching all clubs");
+
+                if (_context.Club == null)
+                {
+                    _logger.LogError("Club DbSet is null");
+                    return Problem("Entity set 'TennisAppContext.Club' is null.");
+                }
+
+                var clubs = await _context.Club.ToListAsync();
+                _logger.LogInformation($"Retrieved {clubs.Count} clubs");
+
+                // Return using custom serialization options
+                return new JsonResult(clubs, _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching clubs");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // GET: api/Club/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Club>> GetClub(int id)
         {
-            var club = await _context.Club.FindAsync(id);
-
-            if (club == null)
+            try
             {
-                return NotFound();
-            }
+                if (_context.Club == null)
+                {
+                    return Problem("Entity set 'TennisAppContext.Club' is null.");
+                }
 
-            return club;
+                var club = await _context.Club.FindAsync(id);
+
+                if (club == null)
+                {
+                    return NotFound();
+                }
+
+                return new JsonResult(club, _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching club with ID {id}");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // POST: api/Club
         [HttpPost]
         public async Task<ActionResult<Club>> CreateClub(Club club)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                _context.Club.Add(club);
+                await _context.SaveChangesAsync();
+
+                return new JsonResult(
+                    CreatedAtAction(nameof(GetClub), new { id = club.Id }, club).Value,
+                    _jsonOptions
+                );
             }
-
-            _context.Club.Add(club);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetClub), new { id = club.Id }, club);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating club");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // PUT: api/Club/5
@@ -68,9 +122,10 @@ namespace TennisApp.Controllers
                 return BadRequest(ModelState);
             }
 
+            _context.Entry(club).State = EntityState.Modified;
+
             try
             {
-                _context.Entry(club).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -106,7 +161,7 @@ namespace TennisApp.Controllers
 
         private bool ClubExists(int id)
         {
-            return _context.Club.Any(c => c.Id == id);
+            return (_context.Club?.Any(c => c.Id == id)).GetValueOrDefault();
         }
     }
 }
