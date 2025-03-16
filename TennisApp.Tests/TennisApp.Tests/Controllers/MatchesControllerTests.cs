@@ -215,7 +215,7 @@ namespace TennisApp.Tests.Controllers
             await _context.Match.AddAsync(match);
             await _context.SaveChangesAsync();
 
-            var updatedMatch = new TennisApp.Models.Match
+            var updatedMatchDto = new UpdateMatchDto
             {
                 Id = 1,
                 CourtId = 2, // Change court
@@ -229,7 +229,7 @@ namespace TennisApp.Tests.Controllers
             _context.Entry(match).State = EntityState.Detached;
 
             // Act
-            var result = await _controller.UpdateMatch(1, updatedMatch);
+            var result = await _controller.UpdateMatch(1, updatedMatchDto);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -257,8 +257,18 @@ namespace TennisApp.Tests.Controllers
                 MatchTime = DateTime.UtcNow,
             };
 
+            var updateMatchDto = new UpdateMatchDto
+            {
+                Id = 1,
+                CourtId = 1,
+                Player1Id = 1,
+                Player2Id = 2,
+                ScoreboardId = 1,
+                MatchTime = DateTime.UtcNow,
+            };
+
             // Act
-            var result = await _controller.UpdateMatch(2, match); // Mismatched ID
+            var result = await _controller.UpdateMatch(2, updateMatchDto); // Mismatched ID
 
             // Assert
             Assert.IsType<BadRequestResult>(result);

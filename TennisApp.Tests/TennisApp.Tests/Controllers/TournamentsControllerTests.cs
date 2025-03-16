@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -8,8 +9,10 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TennisApp.Controllers;
 using TennisApp.Data;
+using TennisApp.DTOs;
 using TennisApp.Models;
 using Xunit;
+using static TennisApp.DTOs.TournamentDto;
 
 namespace TennisApp.Tests.Controllers
 {
@@ -18,6 +21,16 @@ namespace TennisApp.Tests.Controllers
         private readonly Mock<ILogger<TournamentController>> _loggerMock;
         private readonly TennisAppContext _context;
         private readonly TournamentController _controller;
+
+        private readonly UpdateTournamentDto tournamentDto = new UpdateTournamentDto
+        {
+            Name = "Fall Tournament",
+            StartDate = new DateTime(2025, 9, 1),
+            EndDate = new DateTime(2025, 9, 5),
+            HostId = 1,
+            Status = TournamentStatus.Upcoming,
+            Type = TournamentType.Singles,
+        };
 
         public TournamentControllerTests()
         {
@@ -118,8 +131,10 @@ namespace TennisApp.Tests.Controllers
             var result = await _controller.GetTournaments();
 
             // Assert
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Tournament>>>(result);
-            var tournaments = Assert.IsAssignableFrom<IEnumerable<Tournament>>(actionResult.Value);
+            var actionResult = Assert.IsType<ActionResult<IEnumerable<TournamentDto>>>(result);
+            var tournaments = Assert.IsAssignableFrom<IEnumerable<TournamentDto>>(
+                actionResult.Value
+            );
             Assert.Equal(2, tournaments.Count());
         }
 
@@ -130,8 +145,8 @@ namespace TennisApp.Tests.Controllers
             var result = await _controller.GetTournament(1);
 
             // Assert
-            var actionResult = Assert.IsType<ActionResult<Tournament>>(result);
-            var tournament = Assert.IsType<Tournament>(actionResult.Value);
+            var actionResult = Assert.IsType<ActionResult<TournamentDetailDto>>(result);
+            var tournament = Assert.IsType<TournamentDetailDto>(actionResult.Value);
             Assert.Equal("Spring Open", tournament.Name);
             Assert.Equal(TournamentStatus.Upcoming, tournament.Status);
             Assert.Single(tournament.Matches);
@@ -151,7 +166,7 @@ namespace TennisApp.Tests.Controllers
         public async Task CreateTournament_WithValidModel_ReturnsTournament()
         {
             // Arrange
-            var tournament = new Tournament
+            var createTournamentDto = new CreateTournamentDto
             {
                 Name = "Fall Tournament",
                 StartDate = new DateTime(2025, 9, 1),
@@ -162,12 +177,12 @@ namespace TennisApp.Tests.Controllers
             };
 
             // Act
-            var result = await _controller.CreateTournament(tournament);
+            var result = await _controller.CreateTournament(createTournamentDto);
 
             // Assert
-            var actionResult = Assert.IsType<ActionResult<Tournament>>(result);
+            var actionResult = Assert.IsType<ActionResult<TournamentDto>>(result);
             var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-            var returnedTournament = Assert.IsType<Tournament>(createdAtActionResult.Value);
+            var returnedTournament = Assert.IsType<TournamentDto>(createdAtActionResult.Value);
             Assert.Equal("Fall Tournament", returnedTournament.Name);
             Assert.Equal(DateTimeKind.Utc, returnedTournament.StartDate.Kind);
             Assert.Equal(DateTimeKind.Utc, returnedTournament.EndDate.Kind);
@@ -177,7 +192,7 @@ namespace TennisApp.Tests.Controllers
         public async Task CreateTournament_WithEndDateBeforeStartDate_ReturnsBadRequest()
         {
             // Arrange
-            var tournament = new Tournament
+            var invalidTournamentDto = new UpdateTournamentDto
             {
                 Name = "Invalid Tournament",
                 StartDate = new DateTime(2025, 9, 10),
@@ -188,11 +203,10 @@ namespace TennisApp.Tests.Controllers
             };
 
             // Act
-            var result = await _controller.CreateTournament(tournament);
+            var result = await _controller.CreateTournament(invalidTournamentDto);
 
             // Assert
-            var actionResult = Assert.IsType<ActionResult<Tournament>>(result);
-            var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
             var modelState = Assert.IsType<SerializableError>(badRequestResult.Value);
             Assert.True(modelState.ContainsKey("EndDate"));
         }
@@ -201,16 +215,22 @@ namespace TennisApp.Tests.Controllers
         public async Task UpdateTournament_WithValidModel_ReturnsNoContent()
         {
             // Arrange
-            var tournament = await _context.Tournament.FindAsync(1);
-            Assert.NotNull(tournament);
-            tournament.Name = "Updated Spring Open";
-            tournament.Status = TournamentStatus.Ongoing;
+            var updateTournamentDto = new UpdateTournamentDto
+            {
+                Id = 1,
+                Name = "Updated Spring Open",
+                StartDate = new DateTime(2025, 4, 1),
+                EndDate = new DateTime(2025, 4, 5),
+                HostId = 1,
+                Status = TournamentStatus.Ongoing,
+                Type = TournamentType.Singles,
+            };
 
             // Act
-            var result = await _controller.UpdateTournament(1, tournament);
+            var result = await _controller.UpdateTournament(1, updateTournamentDto);
 
             // Assert
-            Assert.IsType<NoContentResult>(result);
+            var noContentResult = Assert.IsType<NoContentResult>(result);
             var updatedTournament = await _context.Tournament.FindAsync(1);
             Assert.NotNull(updatedTournament);
             Assert.Equal("Updated Spring Open", updatedTournament.Name);
@@ -221,28 +241,41 @@ namespace TennisApp.Tests.Controllers
         public async Task UpdateTournament_WithInvalidId_ReturnsBadRequest()
         {
             // Arrange
-            var tournament = await _context.Tournament.FindAsync(1);
-            Assert.NotNull(tournament);
-            tournament.Name = "Updated Spring Open";
+            var updateTournamentDto = new UpdateTournamentDto
+            {
+                Id = 1,
+                Name = "Updated Spring Open",
+                StartDate = new DateTime(2025, 4, 1),
+                EndDate = new DateTime(2025, 4, 5),
+                HostId = 1,
+                Status = TournamentStatus.Ongoing,
+                Type = TournamentType.Singles,
+            };
 
             // Act
-            var result = await _controller.UpdateTournament(999, tournament);
+            var result = await _controller.UpdateTournament(999, updateTournamentDto);
 
             // Assert
-            Assert.IsType<BadRequestResult>(result);
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         }
 
         [Fact]
         public async Task UpdateTournament_WithEndDateBeforeStartDate_ReturnsBadRequest()
         {
             // Arrange
-            var tournament = await _context.Tournament.FindAsync(1);
-            Assert.NotNull(tournament);
-            tournament.StartDate = new DateTime(2025, 4, 10);
-            tournament.EndDate = new DateTime(2025, 4, 5);
+            var invalidTournamentDto = new UpdateTournamentDto
+            {
+                Id = 1,
+                Name = "Updated Spring Open",
+                StartDate = new DateTime(2025, 4, 10),
+                EndDate = new DateTime(2025, 4, 5),
+                HostId = 1,
+                Status = TournamentStatus.Upcoming,
+                Type = TournamentType.Singles,
+            };
 
             // Act
-            var result = await _controller.UpdateTournament(1, tournament);
+            var result = await _controller.UpdateTournament(1, invalidTournamentDto);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -279,8 +312,8 @@ namespace TennisApp.Tests.Controllers
             var result = await _controller.GetTournamentMatches(1);
 
             // Assert
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Models.Match>>>(result);
-            var matches = Assert.IsAssignableFrom<IEnumerable<Models.Match>>(actionResult.Value);
+            var actionResult = Assert.IsType<ActionResult<IEnumerable<MatchDto>>>(result);
+            var matches = Assert.IsAssignableFrom<IEnumerable<MatchDto>>(actionResult.Value);
             Assert.Single(matches);
         }
 
@@ -314,7 +347,7 @@ namespace TennisApp.Tests.Controllers
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedMatch = Assert.IsType<Models.Match>(okResult.Value);
+            var returnedMatch = Assert.IsType<MatchDto>(okResult.Value);
             Assert.Equal(2, returnedMatch.TournamentId);
         }
 
@@ -343,8 +376,14 @@ namespace TennisApp.Tests.Controllers
         [Fact]
         public async Task UpdateTournamentStatus_WithValidId_UpdatesStatus()
         {
+            // Arrange
+            var updateStatusDto = new UpdateTournamentStatusDto
+            {
+                Status = TournamentStatus.Ongoing,
+            };
+
             // Act
-            var result = await _controller.UpdateTournamentStatus(1, TournamentStatus.Ongoing);
+            var result = await _controller.UpdateTournamentStatus(1, updateStatusDto);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -356,8 +395,14 @@ namespace TennisApp.Tests.Controllers
         [Fact]
         public async Task UpdateTournamentStatus_WithInvalidId_ReturnsNotFound()
         {
+            // Arrange
+            var updateStatusDto = new UpdateTournamentStatusDto
+            {
+                Status = TournamentStatus.Ongoing,
+            };
+
             // Act
-            var result = await _controller.UpdateTournamentStatus(999, TournamentStatus.Ongoing);
+            var result = await _controller.UpdateTournamentStatus(999, updateStatusDto);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
