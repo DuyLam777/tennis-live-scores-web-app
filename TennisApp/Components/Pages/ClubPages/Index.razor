@@ -3,20 +3,24 @@
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Clubs</PageTitle>
 
-<h1>Index</h1>
+<div class="page-container">
+    <h1>Clubs</h1>
 
-<p>
-    <a href="clubs/create">Create New</a>
-</p>
+    <p>
+        <a href="clubs/create" class="btn btn-primary">Create New</a>
+    </p>
 
-<QuickGrid Class="table" Items="DB.Club">
-    <PropertyColumn Property="club => club.Name" />
+    <div class="table-container">
+        <QuickGrid Class="quick-grid" Items="DB.Club">
+            <PropertyColumn Property="club => club.Name" Title="Name" Sortable="true" />
 
-    <TemplateColumn Context="club">
-        <a href="@($"clubs/edit?id={club.Id}")">Edit</a> |
-        <a href="@($"clubs/details?id={club.Id}")">Details</a> |
-        <a href="@($"clubs/delete?id={club.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+            <TemplateColumn Title="Actions">
+                <a href="@($"clubs/edit?id={context.Id}")" class="btn btn-primary btn-sm action-button">Edit</a>
+                <a href="@($"clubs/details?id={context.Id}")" class="btn btn-info btn-sm action-button">Details</a>
+                <a href="@($"clubs/delete?id={context.Id}")" class="btn btn-danger btn-sm action-button">Delete</a>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+</div>

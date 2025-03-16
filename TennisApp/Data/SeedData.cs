@@ -292,14 +292,42 @@ namespace TennisApp.Data
                 new Scoreboard { BatteryLevel = 85, LastConnected = DateTime.UtcNow.AddHours(-2) },
                 new Scoreboard { BatteryLevel = 92, LastConnected = DateTime.UtcNow.AddHours(-1) },
                 new Scoreboard { BatteryLevel = 76, LastConnected = DateTime.UtcNow.AddHours(-3) },
-                new Scoreboard { BatteryLevel = 88, LastConnected = DateTime.UtcNow.AddMinutes(-45) },
-                new Scoreboard { BatteryLevel = 95, LastConnected = DateTime.UtcNow.AddMinutes(-15) },
-                new Scoreboard { BatteryLevel = 82, LastConnected = DateTime.UtcNow.AddMinutes(-30) },
-                new Scoreboard { BatteryLevel = 78, LastConnected = DateTime.UtcNow.AddHours(-1.5) },
-                new Scoreboard { BatteryLevel = 90, LastConnected = DateTime.UtcNow.AddMinutes(-10) },
+                new Scoreboard
+                {
+                    BatteryLevel = 88,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-45),
+                },
+                new Scoreboard
+                {
+                    BatteryLevel = 95,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-15),
+                },
+                new Scoreboard
+                {
+                    BatteryLevel = 82,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-30),
+                },
+                new Scoreboard
+                {
+                    BatteryLevel = 78,
+                    LastConnected = DateTime.UtcNow.AddHours(-1.5),
+                },
+                new Scoreboard
+                {
+                    BatteryLevel = 90,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-10),
+                },
                 new Scoreboard { BatteryLevel = 65, LastConnected = DateTime.UtcNow.AddHours(-4) },
-                new Scoreboard { BatteryLevel = 87, LastConnected = DateTime.UtcNow.AddMinutes(-25) },
-                new Scoreboard { BatteryLevel = 93, LastConnected = DateTime.UtcNow.AddMinutes(-5) },
+                new Scoreboard
+                {
+                    BatteryLevel = 87,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-25),
+                },
+                new Scoreboard
+                {
+                    BatteryLevel = 93,
+                    LastConnected = DateTime.UtcNow.AddMinutes(-5),
+                },
             };
             context.Scoreboard.AddRange(scoreboards);
 
@@ -767,7 +795,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[0].Id  // John Doe's ID
+                WinnerId = players[0].Id, // John Doe's ID
             };
             context.Set.Add(pastMatch1Set1);
 
@@ -780,7 +808,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = players[0].Id  // John Doe's ID
+                WinnerId = players[0].Id, // John Doe's ID
             };
             context.Set.Add(pastMatch1Set2);
 
@@ -790,7 +818,7 @@ namespace TennisApp.Data
                 PointsPlayer1 = new List<string> { "15", "30", "40" },
                 PointsPlayer2 = new List<string> { "0", "15", "30" },
                 IsCompleted = true,
-                WinnerId = players[0].Id  // John Doe's ID
+                WinnerId = players[0].Id, // John Doe's ID
             };
             pastMatch1Set1.Games.Add(pastMatch1Set1Game1);
 
@@ -804,7 +832,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = players[1].Id  // Jane Smith's ID
+                WinnerId = players[1].Id, // Jane Smith's ID
             };
             context.Set.Add(pastMatch2Set1);
 
@@ -817,7 +845,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[3].Id  // Emma Williams's ID
+                WinnerId = players[3].Id, // Emma Williams's ID
             };
             context.Set.Add(pastMatch2Set2);
 
@@ -830,7 +858,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[1].Id  // Jane Smith's ID
+                WinnerId = players[1].Id, // Jane Smith's ID
             };
             context.Set.Add(pastMatch2Set3);
 
@@ -844,7 +872,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[6].Id  // Alexander Miller's ID
+                WinnerId = players[6].Id, // Alexander Miller's ID
             };
             context.Set.Add(pastMatch3Set1);
 
@@ -857,7 +885,7 @@ namespace TennisApp.Data
                 Player1Games = 2,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[6].Id  // Alexander Miller's ID
+                WinnerId = players[6].Id, // Alexander Miller's ID
             };
             context.Set.Add(pastMatch3Set2);
 
@@ -872,7 +900,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = players[0].Id  // John Doe's ID
+                WinnerId = players[0].Id, // John Doe's ID
             };
             context.Set.Add(ongoingMatch1Set1);
 
@@ -885,7 +913,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[4].Id  // Carlos Rodriguez's ID
+                WinnerId = players[4].Id, // Carlos Rodriguez's ID
             };
             context.Set.Add(ongoingMatch1Set2);
 
@@ -896,7 +924,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch1.MatchTime.AddMinutes(125),
                 Player1Games = 2,
                 Player2Games = 3,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch1Set3);
 
@@ -905,7 +933,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15" },
                 PointsPlayer2 = new List<string> { "15", "30" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch1Set3.Games.Add(currentGame);
 
@@ -917,7 +945,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch2.MatchTime.AddMinutes(5),
                 Player1Games = 4,
                 Player2Games = 3,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch2Set1);
 
@@ -925,7 +953,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15", "30", "40" },
                 PointsPlayer2 = new List<string> { "15", "30" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch2Set1.Games.Add(ongoingMatch2CurrentGame);
 
@@ -937,7 +965,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch3.MatchTime.AddMinutes(5),
                 Player1Games = 1,
                 Player2Games = 2,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch3Set1);
 
@@ -945,7 +973,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "0" },
                 PointsPlayer2 = new List<string> { "15" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch3Set1.Games.Add(ongoingMatch3CurrentGame);
 
@@ -959,7 +987,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = players[9].Id  // Naomi Tanaka's ID
+                WinnerId = players[9].Id, // Naomi Tanaka's ID
             };
             context.Set.Add(ongoingMatch4Set1);
 
@@ -970,7 +998,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch4.MatchTime.AddMinutes(70),
                 Player1Games = 2,
                 Player2Games = 4,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch4Set2);
 
@@ -978,7 +1006,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15", "30" },
                 PointsPlayer2 = new List<string> { "15", "30", "40" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch4Set2.Games.Add(ongoingMatch4CurrentGame);
 
@@ -990,7 +1018,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch5.MatchTime.AddMinutes(5),
                 Player1Games = 5,
                 Player2Games = 5,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch5Set1);
 
@@ -998,7 +1026,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15", "30", "40" },
                 PointsPlayer2 = new List<string> { "0" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch5Set1.Games.Add(ongoingMatch5CurrentGame);
 
@@ -1012,7 +1040,7 @@ namespace TennisApp.Data
                 Player1Games = 7,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[13].Id  // Ana Costa's ID
+                WinnerId = players[13].Id, // Ana Costa's ID
             };
             context.Set.Add(ongoingMatch6Set1);
 
@@ -1025,7 +1053,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = players[17].Id  // Serena Davis's ID
+                WinnerId = players[17].Id, // Serena Davis's ID
             };
             context.Set.Add(ongoingMatch6Set2);
 
@@ -1036,7 +1064,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch6.MatchTime.AddMinutes(140),
                 Player1Games = 1,
                 Player2Games = 0,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch6Set3);
 
@@ -1044,7 +1072,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15" },
                 PointsPlayer2 = new List<string> { "0" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch6Set3.Games.Add(ongoingMatch6CurrentGame);
 
@@ -1058,7 +1086,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = players[14].Id  // Felix Hansen's ID
+                WinnerId = players[14].Id, // Felix Hansen's ID
             };
             context.Set.Add(ongoingMatch7Set1);
 
@@ -1069,7 +1097,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch7.MatchTime.AddMinutes(60),
                 Player1Games = 3,
                 Player2Games = 3,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch7Set2);
 
@@ -1077,7 +1105,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15", "30" },
                 PointsPlayer2 = new List<string> { "15", "30", "40" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch7Set2.Games.Add(ongoingMatch7CurrentGame);
 
@@ -1089,7 +1117,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch8.MatchTime.AddMinutes(5),
                 Player1Games = 2,
                 Player2Games = 2,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch8Set1);
 
@@ -1097,7 +1125,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "15", "30" },
                 PointsPlayer2 = new List<string> { "15" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch8Set1.Games.Add(ongoingMatch8CurrentGame);
 
@@ -1109,7 +1137,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch9.MatchTime.AddMinutes(5),
                 Player1Games = 0,
                 Player2Games = 0,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch9Set1);
 
@@ -1117,7 +1145,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "0" },
                 PointsPlayer2 = new List<string> { "0" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch9Set1.Games.Add(ongoingMatch9CurrentGame);
 
@@ -1129,7 +1157,7 @@ namespace TennisApp.Data
                 StartTime = ongoingMatch10.MatchTime.AddMinutes(5),
                 Player1Games = 3,
                 Player2Games = 5,
-                IsCompleted = false
+                IsCompleted = false,
             };
             context.Set.Add(ongoingMatch10Set1);
 
@@ -1137,7 +1165,7 @@ namespace TennisApp.Data
             {
                 PointsPlayer1 = new List<string> { "0" },
                 PointsPlayer2 = new List<string> { "15", "30" },
-                IsCompleted = false
+                IsCompleted = false,
             };
             ongoingMatch10Set1.Games.Add(ongoingMatch10CurrentGame);
 
@@ -1145,5 +1173,4 @@ namespace TennisApp.Data
             context.SaveChanges();
         }
     }
-
 }
