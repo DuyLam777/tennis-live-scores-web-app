@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,24 @@ builder.WebHost.UseUrls("http://0.0.0.0:5020");
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-builder.Services.AddControllers();
+
+// Configure JSON serialization options for controllers
+builder
+    .Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Handle circular references
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+
+        // Increase max depth to avoid the "object depth is larger than the maximum allowed depth" error
+        options.JsonSerializerOptions.MaxDepth = 64;
+
+        // Configure enum conversion to use string names instead of numeric values
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+        // Optional: Skip null values in the JSON output
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
 
 // Register the DbContext with PostgreSQL
 builder.Services.AddDbContext<TennisAppContext>(options =>

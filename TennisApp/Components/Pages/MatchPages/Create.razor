@@ -1,160 +1,261 @@
 @page "/matches/create"
-@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@page "/matches/create/{TournamentId:int?}"
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @using TennisApp.Models
-@using Microsoft.EntityFrameworkCore
+@using TennisApp.DTOs
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.Text.Json.Serialization
 
 @rendermode InteractiveServer
 
 <PageTitle>Create Match</PageTitle>
 
-<h1>Create</h1>
-<h4>Match</h4>
+<h1>Create Match</h1>
 <hr />
 
 @if (isLoading)
 {
-    <p>Loading...</p>
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 }
 else if (matchCreated)
 {
     <div class="alert alert-success">
         <p>Match created successfully!</p>
-        <a href="/matches" class="btn btn-primary">Back to Matches</a>
+        @if (matchDto.TournamentId.HasValue)
+        {
+            <a href="/tournaments/details/@matchDto.TournamentId" class="btn btn-primary">Back to Tournament</a>
+        }
+        else
+        {
+            <a href="/matches" class="btn btn-primary">Back to Matches</a>
+        }
     </div>
 }
 else
 {
     <div class="row">
-        <div class="col-md-4">
-            <form @onsubmit="AddMatch">
-                @if (validationErrors.Any())
-                {
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach (var error in validationErrors)
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Match Details</h4>
+                </div>
+                <div class="card-body">
+                    @if (validationErrors.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    
+                    <form @onsubmit="AddMatch">
+                        <!-- Tournament Dropdown (if not pre-selected) -->
+                        @if (!preselectedTournament)
+                        {
+                            <div class="mb-3">
+                                <label for="tournament" class="form-label">Tournament (Optional):</label>
+                                <select id="tournament" @bind="matchDto.TournamentId" class="form-select">
+                                    <option value="">-- No Tournament --</option>
+                                    @foreach (var tournament in tournaments)
+                                    {
+                                        <option value="@tournament.Id">@tournament.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Tournament (Pre-selected):</label>
+                                <input type="text" class="form-control" readonly value="@selectedTournamentName" />
+                                <input type="hidden" @bind="matchDto.TournamentId" />
+                            </div>
+                        }
+
+                        <!-- Court Dropdown -->
+                        <div class="mb-3">
+                            <label for="court" class="form-label">Court:</label>
+                            <select id="court" @bind="matchDto.CourtId" class="form-select">
+                                <option value="0">-- Select a Court --</option>
+                                @foreach (var court in courts)
+                                {
+                                    <option value="@court.Id">@court.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Match Date and Time -->
+                        <div class="mb-3">
+                            <label for="matchdate" class="form-label">Match Date:</label>
+                            <input id="matchdate" type="date" class="form-control" value="@_dateString"
+                                @onchange="@(e => _dateString = e.Value?.ToString() ?? _dateString)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="matchtime" class="form-label">Match Time:</label>
+                            <input id="matchtime" type="time" class="form-control" value="@_timeString"
+                                @onchange="@(e => _timeString = e.Value?.ToString() ?? _timeString)" />
+                        </div>
+
+                        <!-- Player 1 Dropdown -->
+                        <div class="mb-3">
+                            <label for="player1" class="form-label">Player 1:</label>
+                            <select id="player1" @bind="matchDto.Player1Id" class="form-select">
+                                <option value="0">-- Select Player 1 --</option>
+                                @foreach (var player in players)
+                                {
+                                    <option value="@player.Id">@player.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Player 2 Dropdown -->
+                        <div class="mb-3">
+                            <label for="player2" class="form-label">Player 2:</label>
+                            <select id="player2" @bind="matchDto.Player2Id" class="form-select">
+                                <option value="0">-- Select Player 2 --</option>
+                                @foreach (var player in players)
+                                {
+                                    <option value="@player.Id">@player.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Scoreboard Dropdown -->
+                        <div class="mb-3">
+                            <label for="scoreboard" class="form-label">Scoreboard:</label>
+                            <select id="scoreboard" @bind="matchDto.ScoreboardId" class="form-select">
+                                <option value="0">-- Select a Scoreboard --</option>
+                                @foreach (var scoreboard in scoreboards)
+                                {
+                                    <option value="@scoreboard.Id">@scoreboard.Id</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">Create Match</button>
+                            @if (preselectedTournament)
                             {
-                                <li>@error</li>
+                                <a href="/tournaments/details/@matchDto.TournamentId" class="btn btn-secondary ms-2">Cancel</a>
                             }
-                        </ul>
-                    </div>
-                }
-
-                <!-- Court Dropdown -->
-                <div class="mb-3">
-                    <label for="court" class="form-label">Court:</label>
-                    <select id="court" @bind="Match.CourtId" class="form-control">
-                        <option value="0">-- Select a Court --</option>
-                        @foreach (var court in courts)
-                        {
-                            <option value="@court.Id">@court.Name</option>
-                        }
-                    </select>
+                            else
+                            {
+                                <a href="/matches" class="btn btn-secondary ms-2">Cancel</a>
+                            }
+                        </div>
+                    </form>
                 </div>
-
-                <!-- Match Date and Time -->
-                <div class="mb-3">
-                    <label for="matchdate" class="form-label">Match Date:</label>
-                    <input id="matchdate" type="date" class="form-control" value="@_dateString"
-                        @onchange="@(e => _dateString = e.Value?.ToString() ?? _dateString)" />
-                </div>
-
-                <div class="mb-3">
-                    <label for="matchtime" class="form-label">Match Time:</label>
-                    <input id="matchtime" type="time" class="form-control" value="@_timeString"
-                        @onchange="@(e => _timeString = e.Value?.ToString() ?? _timeString)" />
-                </div>
-
-                <!-- Player 1 Dropdown -->
-                <div class="mb-3">
-                    <label for="player1" class="form-label">Player 1:</label>
-                    <select id="player1" @bind="Match.Player1Id" class="form-control">
-                        <option value="0">-- Select Player 1 --</option>
-                        @foreach (var player in players)
-                        {
-                            <option value="@player.Id">@player.Name</option>
-                        }
-                    </select>
-                </div>
-
-                <!-- Player 2 Dropdown -->
-                <div class="mb-3">
-                    <label for="player2" class="form-label">Player 2:</label>
-                    <select id="player2" @bind="Match.Player2Id" class="form-control">
-                        <option value="0">-- Select Player 2 --</option>
-                        @foreach (var player in players)
-                        {
-                            <option value="@player.Id">@player.Name</option>
-                        }
-                    </select>
-                </div>
-
-                <!-- Scoreboard Dropdown -->
-                <div class="mb-3">
-                    <label for="scoreboard" class="form-label">Scoreboard:</label>
-                    <select id="scoreboard" @bind="Match.ScoreboardId" class="form-control">
-                        <option value="0">-- Select a Scoreboard --</option>
-                        @foreach (var scoreboard in scoreboards)
-                        {
-                            <option value="@scoreboard.Id">@scoreboard.Id</option>
-                        }
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Create</button>
-                <a href="/matches" class="btn btn-secondary">Cancel</a>
-            </form>
+            </div>
         </div>
+
+        @if (matchDto.TournamentId.HasValue && selectedTournament != null)
+        {
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h4>Tournament Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Name:</dt>
+                            <dd class="col-sm-8">@selectedTournament.Name</dd>
+
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge @GetStatusBadgeClass(selectedTournament.Status)">
+                                    @selectedTournament.Status
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Players:</dt>
+                            <dd class="col-sm-8">
+                                @if (selectedTournament.MaxParticipants.HasValue)
+                                {
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">@currentParticipantCount / @selectedTournament.MaxParticipants</span>
+                                        <div class="progress flex-grow-1" style="height: 10px;">
+                                            <div class="progress-bar @(IsNearCapacity() ? "bg-warning" : "bg-success")" 
+                                                role="progressbar" 
+                                                style="width: @(Math.Min(100, currentParticipantCount * 100 / selectedTournament.MaxParticipants.Value))%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>@currentParticipantCount (No limit set)</span>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 }
 
 @code {
-    // Initialize the Match property with default values
-    private Match Match { get; set; } = new Match();
+    [Parameter]
+    public int? TournamentId { get; set; }
+
+    // Use DTO for API
+    private CreateMatchDto matchDto = new CreateMatchDto();
+    private TournamentDetailDto? selectedTournament;
+    private int currentParticipantCount = 0;
 
     private List<Court> courts = new();
-    private List<Player> players = new();
+    private List<PlayerSimpleDto> players = new();
     private List<Scoreboard> scoreboards = new();
+    private List<TournamentDto> tournaments = new();
     private bool isLoading = true;
     private bool matchCreated = false;
     private List<string> validationErrors = new();
+
+    // Track if we're using a preselected tournament
+    private bool preselectedTournament = false;
+    private string selectedTournamentName = string.Empty;
 
     // Simple string properties for date and time
     private string _dateString = DateTime.Now.ToString("yyyy-MM-dd");
     private string _timeString = DateTime.Now.ToString("HH:mm");
 
+    // JSON Serializer Options
+    private JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Load each set of data sequentially with separate contexts
-            await LoadCourtsAsync();
-            await LoadPlayersAsync();
-            await LoadScoreboardsAsync();
+            await LoadDataAsync();
 
-            // Set a default court if available
-            if (courts.Any())
+            // Handle tournament parameter if provided
+            if (TournamentId.HasValue && TournamentId.Value > 0)
             {
-                Match.CourtId = courts.First().Id;
+                await HandleTournamentParameter();
             }
 
-            // Set default players if available
-            if (players.Count >= 2)
-            {
-                Match.Player1Id = players[0].Id;
-                Match.Player2Id = players[1].Id;
-            }
-
-            // Set a default scoreboard if available
-            if (scoreboards.Any())
-            {
-                Match.ScoreboardId = scoreboards.First().Id;
-            }
+            // Set defaults if data is available
+            SetDefaults();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading data: {ex.Message}");
-            validationErrors.Add($"Error loading data: {ex.Message}");
+            validationErrors.Add($"Error initializing: {ex.Message}");
+            Console.WriteLine($"Error in OnInitializedAsync: {ex}");
         }
         finally
         {
@@ -162,22 +263,314 @@ else
         }
     }
 
-    private async Task LoadCourtsAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        courts = await context.Court.ToListAsync();
+        // This handles the case when a TournamentId is passed via the route
+        if (TournamentId.HasValue && TournamentId.Value > 0 && !preselectedTournament)
+        {
+            await HandleTournamentParameter();
+        }
     }
 
-    private async Task LoadPlayersAsync()
+    private async Task LoadDataAsync()
     {
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        players = await context.Player.ToListAsync();
+        try 
+        {
+            // Load Courts - using JsonDocument to extract values
+            var courtsResponse = await HttpClient.GetAsync("api/Courts");
+            var courtsJson = await courtsResponse.Content.ReadAsStringAsync();
+            
+            try {
+                // Parse the JSON and extract the values array
+                using var jsonDoc = JsonDocument.Parse(courtsJson);
+                if (jsonDoc.RootElement.TryGetProperty("$values", out var valuesElement))
+                {
+                    // Convert each court object manually
+                    courts = new List<Court>();
+                    foreach (var courtElement in valuesElement.EnumerateArray())
+                    {
+                        var court = new Court
+                        {
+                            Id = courtElement.GetProperty("id").GetInt32(),
+                            Name = courtElement.GetProperty("name").GetString() ?? string.Empty,
+                            IsOccupied = courtElement.GetProperty("isOccupied").GetBoolean(),
+                            IsIndoor = courtElement.GetProperty("isIndoor").GetBoolean()
+                        };
+                        courts.Add(court);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                validationErrors.Add($"Error parsing courts: {ex.Message}");
+                courts = new List<Court>();
+            }
+            
+            // Load Players - using simple DTOs to avoid Gender enum issues
+            var playersResponse = await HttpClient.GetAsync("api/Players");
+            var playersJson = await playersResponse.Content.ReadAsStringAsync();
+            
+            try {
+                using var jsonDoc = JsonDocument.Parse(playersJson);
+                if (jsonDoc.RootElement.TryGetProperty("$values", out var valuesElement))
+                {
+                    // Create simplified player DTOs to avoid Gender enum issues
+                    players = new List<PlayerSimpleDto>();
+                    foreach (var playerElement in valuesElement.EnumerateArray())
+                    {
+                        var player = new PlayerSimpleDto
+                        {
+                            Id = playerElement.GetProperty("id").GetInt32(),
+                            Name = playerElement.GetProperty("name").GetString() ?? string.Empty
+                        };
+                        players.Add(player);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                validationErrors.Add($"Error parsing players: {ex.Message}");
+                players = new List<PlayerSimpleDto>();
+            }
+            
+            // Load Scoreboards
+            var scoreboardsResponse = await HttpClient.GetAsync("api/Scoreboards");
+            var scoreboardsJson = await scoreboardsResponse.Content.ReadAsStringAsync();
+            
+            try {
+                using var jsonDoc = JsonDocument.Parse(scoreboardsJson);
+                if (jsonDoc.RootElement.TryGetProperty("$values", out var valuesElement))
+                {
+                    // Convert each scoreboard object manually
+                    scoreboards = new List<Scoreboard>();
+                    foreach (var scoreboardElement in valuesElement.EnumerateArray())
+                    {
+                        var scoreboard = new Scoreboard
+                        {
+                            Id = scoreboardElement.GetProperty("id").GetInt32()
+                        };
+                        scoreboards.Add(scoreboard);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                validationErrors.Add($"Error parsing scoreboards: {ex.Message}");
+                scoreboards = new List<Scoreboard>();
+            }
+
+            // Load Tournaments
+            var tournamentsResponse = await HttpClient.GetAsync("api/Tournament");
+            var tournamentsJson = await tournamentsResponse.Content.ReadAsStringAsync();
+            
+            try {
+                using var jsonDoc = JsonDocument.Parse(tournamentsJson);
+                if (jsonDoc.RootElement.TryGetProperty("$values", out var valuesElement))
+                {
+                    string valuesJson = valuesElement.GetRawText();
+                    tournaments = JsonSerializer.Deserialize<List<TournamentDto>>(valuesJson, jsonOptions) ?? new List<TournamentDto>();
+                    
+                    // Filter active tournaments
+                    tournaments = tournaments
+                        .Where(t => t.Status == TournamentStatus.Upcoming || t.Status == TournamentStatus.Ongoing)
+                        .ToList();
+                }
+            }
+            catch (Exception ex) {
+                validationErrors.Add($"Error parsing tournaments: {ex.Message}");
+                tournaments = new List<TournamentDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            validationErrors.Add($"Error loading data: {ex.Message}");
+            
+            // Initialize empty collections to prevent null references
+            courts = new List<Court>();
+            players = new List<PlayerSimpleDto>();
+            scoreboards = new List<Scoreboard>();
+            tournaments = new List<TournamentDto>();
+        }
     }
 
-    private async Task LoadScoreboardsAsync()
+    private void SetDefaults()
     {
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        scoreboards = await context.Scoreboard.ToListAsync();
+        // Set a default court if available
+        if (courts.Any())
+        {
+            matchDto.CourtId = courts.First().Id;
+        }
+
+        // Set default players if available
+        if (players.Count >= 2)
+        {
+            matchDto.Player1Id = players[0].Id;
+            matchDto.Player2Id = players[1].Id;
+        }
+
+        // Set a default scoreboard if available
+        if (scoreboards.Any())
+        {
+            matchDto.ScoreboardId = scoreboards.First().Id;
+        }
+    }
+
+    private async Task HandleTournamentParameter()
+    {
+        if (TournamentId.HasValue && TournamentId.Value > 0)
+        {
+            try
+            {
+                // Set the Match's TournamentId
+                matchDto.TournamentId = TournamentId.Value;
+                preselectedTournament = true;
+
+                // Get the tournament from the list if loaded
+                var tournamentFromList = tournaments.FirstOrDefault(t => t.Id == TournamentId.Value);
+                if (tournamentFromList != null)
+                {
+                    selectedTournamentName = tournamentFromList.Name;
+                }
+
+                // Get the tournament details
+                var tournamentResponse = await HttpClient.GetAsync($"api/Tournament/{TournamentId.Value}");
+                var tournamentJson = await tournamentResponse.Content.ReadAsStringAsync();
+                
+                try {
+                    // First parse the tournament without matches
+                    using var doc = JsonDocument.Parse(tournamentJson);
+                    var root = doc.RootElement;
+                    
+                    // Create a TournamentDetailDto and populate it manually
+                    selectedTournament = new TournamentDetailDto
+                    {
+                        Id = GetInt(root, "id"),
+                        Name = GetString(root, "name"),
+                        StartDate = GetDateTime(root, "startDate"),
+                        EndDate = GetDateTime(root, "endDate"),
+                        HostId = GetInt(root, "hostId"),
+                        HostName = GetString(root, "hostName"),
+                        Description = GetString(root, "description"),
+                        Status = GetEnum<TournamentStatus>(root, "status"),
+                        Type = GetEnum<TournamentType>(root, "type"),
+                        MaxParticipants = GetNullableInt(root, "maxParticipants"),
+                        DurationInDays = GetInt(root, "durationInDays"),
+                        WinnerId = GetNullableInt(root, "winnerId"),
+                        WinnerName = GetString(root, "winnerName"),
+                        Matches = new List<MatchDto>()
+                    };
+                    
+                    selectedTournamentName = selectedTournament.Name;
+                    
+                    // Now handle matches separately
+                    if (root.TryGetProperty("matches", out var matchesElement) && 
+                        matchesElement.TryGetProperty("$values", out var valuesElement))
+                    {
+                        // Create matches manually to avoid any deserialization issues
+                        var matchesList = new List<MatchDto>();
+                        foreach (var matchElement in valuesElement.EnumerateArray())
+                        {
+                            var match = new MatchDto
+                            {
+                                Id = GetInt(matchElement, "id"),
+                                CourtId = GetInt(matchElement, "courtId"),
+                                CourtName = GetString(matchElement, "courtName"),
+                                MatchTime = GetDateTime(matchElement, "matchTime"),
+                                Player1Id = GetInt(matchElement, "player1Id"),
+                                Player1Name = GetString(matchElement, "player1Name"),
+                                Player2Id = GetInt(matchElement, "player2Id"),
+                                Player2Name = GetString(matchElement, "player2Name"),
+                                ScoreboardId = GetInt(matchElement, "scoreboardId"),
+                                TournamentId = GetNullableInt(matchElement, "tournamentId")
+                            };
+                            matchesList.Add(match);
+                        }
+                        
+                        selectedTournament.Matches = matchesList;
+                        
+                        // Calculate participant count
+                        var uniquePlayerIds = new HashSet<int>();
+                        foreach (var match in matchesList)
+                        {
+                            if (match.Player1Id > 0) uniquePlayerIds.Add(match.Player1Id);
+                            if (match.Player2Id > 0) uniquePlayerIds.Add(match.Player2Id);
+                        }
+                        currentParticipantCount = uniquePlayerIds.Count;
+                    }
+                }
+                catch (Exception ex) {
+                    validationErrors.Add($"Error parsing tournament details: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                validationErrors.Add($"Error loading tournament details: {ex.Message}");
+                preselectedTournament = false;
+            }
+        }
+    }
+
+    // Helper methods for parsing JSON
+    private string GetString(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetString() ?? string.Empty;
+        }
+        return string.Empty;
+    }
+    
+    private int GetInt(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetInt32();
+        }
+        return 0;
+    }
+    
+    private int? GetNullableInt(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null)
+        {
+            return property.GetInt32();
+        }
+        return null;
+    }
+    
+    private DateTime GetDateTime(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null)
+        {
+            if (property.TryGetDateTime(out var dateTime))
+            {
+                return dateTime;
+            }
+        }
+        return DateTime.UtcNow;
+    }
+    
+    private T GetEnum<T>(JsonElement element, string propertyName) where T : struct, Enum
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null)
+        {
+            if (property.ValueKind == JsonValueKind.String)
+            {
+                var stringValue = property.GetString();
+                if (!string.IsNullOrEmpty(stringValue) && Enum.TryParse<T>(stringValue, true, out var enumValue))
+                {
+                    return enumValue;
+                }
+            }
+            else if (property.ValueKind == JsonValueKind.Number)
+            {
+                var intValue = property.GetInt32();
+                if (Enum.IsDefined(typeof(T), intValue))
+                {
+                    return (T)(object)intValue;
+                }
+            }
+        }
+        
+        // Return default value
+        return default;
     }
 
     private bool ValidateModel()
@@ -185,30 +578,45 @@ else
         validationErrors.Clear();
 
         // Validate Court
-        if (Match.CourtId <= 0 || !courts.Any(c => c.Id == Match.CourtId))
+        if (matchDto.CourtId <= 0 || !courts.Any(c => c.Id == matchDto.CourtId))
         {
             validationErrors.Add("Please select a valid court");
             return false;
         }
 
         // Validate Player1
-        if (Match.Player1Id <= 0 || !players.Any(p => p.Id == Match.Player1Id))
+        if (matchDto.Player1Id <= 0 || !players.Any(p => p.Id == matchDto.Player1Id))
         {
             validationErrors.Add("Please select a valid player for Player 1");
             return false;
         }
 
         // Validate Player2
-        if (Match.Player2Id <= 0 || !players.Any(p => p.Id == Match.Player2Id))
+        if (matchDto.Player2Id <= 0 || !players.Any(p => p.Id == matchDto.Player2Id))
         {
             validationErrors.Add("Please select a valid player for Player 2");
             return false;
         }
 
+        // Validate that Player1 and Player2 are different
+        if (matchDto.Player1Id == matchDto.Player2Id)
+        {
+            validationErrors.Add("Player 1 and Player 2 cannot be the same player");
+            return false;
+        }
+
         // Validate Scoreboard
-        if (Match.ScoreboardId <= 0 || !scoreboards.Any(s => s.Id == Match.ScoreboardId))
+        if (matchDto.ScoreboardId <= 0 || !scoreboards.Any(s => s.Id == matchDto.ScoreboardId))
         {
             validationErrors.Add("Please select a valid scoreboard");
+            return false;
+        }
+
+        // Validate Tournament if one is selected
+        if (matchDto.TournamentId.HasValue && matchDto.TournamentId.Value > 0 &&
+            !tournaments.Any(t => t.Id == matchDto.TournamentId.Value))
+        {
+            validationErrors.Add("Please select a valid tournament");
             return false;
         }
 
@@ -217,6 +625,33 @@ else
         {
             validationErrors.Add("Please enter both date and time");
             return false;
+        }
+
+        // Check tournament participant limit
+        if (matchDto.TournamentId.HasValue && selectedTournament != null && selectedTournament.MaxParticipants.HasValue)
+        {
+            // Get existing players in the tournament
+            HashSet<int> existingPlayers = new HashSet<int>();
+            if (selectedTournament.Matches != null)
+            {
+                foreach (var match in selectedTournament.Matches)
+                {
+                    if (match.Player1Id > 0) existingPlayers.Add(match.Player1Id);
+                    if (match.Player2Id > 0) existingPlayers.Add(match.Player2Id);
+                }
+            }
+            
+            // Check if new players exceed limit
+            int newPlayers = 0;
+            if (!existingPlayers.Contains(matchDto.Player1Id)) newPlayers++;
+            if (!existingPlayers.Contains(matchDto.Player2Id)) newPlayers++;
+            
+            if (existingPlayers.Count + newPlayers > selectedTournament.MaxParticipants.Value)
+            {
+                validationErrors.Add($"Adding this match would exceed the tournament's participant limit of {selectedTournament.MaxParticipants.Value}. " +
+                                    $"Current participants: {existingPlayers.Count}, New unique players: {newPlayers}");
+                return false;
+            }
         }
 
         return true;
@@ -236,13 +671,7 @@ else
 
             if (DateTime.TryParse(combinedDateTimeStr, out DateTime parsedDateTime))
             {
-                // Simply mark the parsed DateTime as UTC without conversion
-                // This preserves the exact hours and minutes entered by the user
-                Match.MatchTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc);
-
-                Console.WriteLine($"Input date/time: {combinedDateTimeStr}");
-                Console.WriteLine($"Parsed as: {parsedDateTime}");
-                Console.WriteLine($"Saved as UTC: {Match.MatchTime}");
+                matchDto.MatchTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc);
             }
             else
             {
@@ -250,16 +679,66 @@ else
                 return;
             }
 
-            await using var context = await DbContextFactory.CreateDbContextAsync();
-            context.Match.Add(Match);
-            await context.SaveChangesAsync();
+            // Call the API to create the match
+            var response = await HttpClient.PostAsJsonAsync("api/Matches", matchDto);
 
-            matchCreated = true;
+            if (response.IsSuccessStatusCode)
+            {
+                // Get the created match from the response
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                try {
+                    // Parse the response to get the match ID
+                    using var jsonDoc = JsonDocument.Parse(responseContent);
+                    if (jsonDoc.RootElement.TryGetProperty("id", out var idElement))
+                    {
+                        matchDto.Id = idElement.GetInt32();
+                        matchCreated = true;
+                    }
+                    else
+                    {
+                        // Fallback to assuming creation was successful
+                        matchCreated = true;
+                    }
+                }
+                catch
+                {
+                    // If we can't parse the response, just assume it worked
+                    matchCreated = true;
+                }
+            }
+            else
+            {
+                // Handle error response
+                var errorContent = await response.Content.ReadAsStringAsync();
+                validationErrors.Add($"Error creating match: {response.StatusCode} - {errorContent}");
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating match: {ex.Message}");
             validationErrors.Add($"Error saving match: {ex.Message}");
         }
+    }
+
+    private string GetStatusBadgeClass(TournamentStatus status) => status switch
+    {
+        TournamentStatus.Upcoming => "bg-info",
+        TournamentStatus.Ongoing => "bg-primary",
+        TournamentStatus.Completed => "bg-success",
+        TournamentStatus.Cancelled => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private bool IsNearCapacity()
+    {
+        if (selectedTournament?.MaxParticipants == null) return false;
+        double percentage = (double)currentParticipantCount / selectedTournament.MaxParticipants.Value;
+        return percentage >= 0.8; // 80% or more is considered "near capacity"
+    }
+    
+    public class PlayerSimpleDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }
