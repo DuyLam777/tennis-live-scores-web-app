@@ -20,11 +20,15 @@ public class WebSocketMiddleware
     {
         if (context.WebSockets.IsWebSocketRequest && context.Request.Path == "/ws")
         {
+            _logger.LogInformation("WebSocket connection request received");
+            _logger.LogInformation("Path: {Path}", context.Request.Path);
             var webSocket = await context.WebSockets.AcceptWebSocketAsync();
             await HandleWebSocketAsync(webSocket, dbContext);
         }
         else
         {
+            _logger.LogInformation("Not a WebSocket request or incorrect path");
+            _logger.LogInformation("Path: {Path}", context.Request.Path);
             await _next(context);
         }
     }
@@ -75,6 +79,7 @@ public class WebSocketMiddleware
             if (parts.Length < 5 || !int.TryParse(parts[0], out int matchId))
             {
                 _logger.LogError("Invalid message format");
+                _logger.LogError("Message: {Message}", message);
                 return;
             }
 
