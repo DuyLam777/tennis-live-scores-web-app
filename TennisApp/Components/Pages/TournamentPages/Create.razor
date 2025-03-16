@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @using System.Net.Http.Json
+@using System.Text.Json
 @using TennisApp.Models
 @using TennisApp.Data
 @using Microsoft.EntityFrameworkCore
@@ -159,22 +160,58 @@
     private bool isLoading = true;
     private TennisAppContext dbContext = null!;
 
+    // Custom JSON options to match the server's serialization
+    private JsonSerializerOptions jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var clubResponse = await HttpClient.GetFromJsonAsync<List<Club>>("api/Club");
-            if (clubResponse != null)
+            // Get the raw response
+            var response = await HttpClient.GetAsync("api/Club");
+
+            if (response.IsSuccessStatusCode)
             {
-                clubs = clubResponse;
+                var stringContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Response: {stringContent}");
+
+                // Standard deserialization for normal JSON array
+                clubs = JsonSerializer.Deserialize<List<Club>>(stringContent, jsonOptions) ?? new List<Club>();
+                Console.WriteLine($"Retrieved {clubs.Count} clubs");
+            }
+            else
+            {
+                Console.WriteLine($"API failed with status: {response.StatusCode}");
+                errorMessage = $"Failed to load clubs: {response.StatusCode}";
+
+                // Fallback to database as backup
+                dbContext = await DbContextFactory.CreateDbContextAsync();
+                clubs = await dbContext.Club.ToListAsync();
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error loading clubs {ex.Message}";
-        }
+            Console.WriteLine($"Exception in OnInitializedAsync: {ex}");
+            errorMessage = $"Error loading clubs: {ex.Message}";
 
-        isLoading = false;
+            try
+            {
+                // Fallback to direct database access
+                dbContext = await DbContextFactory.CreateDbContextAsync();
+                clubs = await dbContext.Club.ToListAsync();
+            }
+            catch (Exception fallbackEx)
+            {
+                errorMessage = $"Failed to load clubs from API and database: {fallbackEx.Message}";
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task HandleValidSubmit()
@@ -203,11 +240,13 @@
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Error: {errorContent}");
                 errorMessage = $"Error creating tournament: {response.StatusCode} - {errorContent}";
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Exception in HandleValidSubmit: {ex}");
             errorMessage = $"Error creating tournament: {ex.Message}";
         }
     }
