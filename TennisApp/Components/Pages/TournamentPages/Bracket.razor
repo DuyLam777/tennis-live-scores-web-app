@@ -1,0 +1,574 @@
+@page "/tournaments/{TournamentId:int}/bracket"
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@using System.Net.Http.Json
+@using TennisApp.Models
+@using TennisApp.DTOs
+@using System.Text.Json
+@using System.Text.Json.Serialization
+
+<PageTitle>Tournament Bracket</PageTitle>
+
+<!-- Include required CSS and JavaScript -->
+<link rel="stylesheet" href="lib/brackets-viewer/brackets-viewer.min.css" />
+<link rel="stylesheet" href="css/bracket.css" />
+<script src="lib/brackets-viewer/brackets-viewer.min.js"></script>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="fw-bold">@(tournament?.Name ?? "Tournament") Bracket</h1>
+                <div>
+                    <a href="/tournaments/details/@TournamentId" class="btn btn-outline-secondary">
+                        Back to Tournament
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else if (tournament == null)
+    {
+        <div class="alert alert-warning">Tournament not found.</div>
+    }
+    else if (tournament.Matches == null || !tournament.Matches.Any())
+    {
+        <div class="alert alert-info">
+            <h4>No bracket available</h4>
+            <p>This tournament doesn't have any matches to display in a bracket.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <!-- This div will be used as the root for the bracket library -->
+                <div id="bracketsViewerContainer" class="brackets-viewer"></div>
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    // Function to check if brackets-viewer library is loaded
+    window.isBracketsViewerLoaded = function() {
+        return typeof window.bracketsViewer !== 'undefined';
+    };
+
+    // Function to render the tournament bracket
+    window.renderTournamentBracket = async function(bracketData) {
+        try {
+            console.log("Rendering tournament bracket...");
+
+            if (!window.bracketsViewer) {
+                console.error("bracketsViewer library not found");
+                return false;
+            }
+
+            // Clear the container
+            document.getElementById('bracketsViewerContainer').innerHTML = "";
+
+            // Parse the data if it's a string
+            const data = typeof bracketData === 'string' ? JSON.parse(bracketData) : bracketData;
+
+            // Render the bracket
+            await window.bracketsViewer.render({
+                stages: data.stage,
+                matches: data.match,
+                matchGames: data.match_game,
+                participants: data.participant
+            }, {
+                customRoundName: (info, t) => {
+                    // Map round names from your tournament structure
+                    if (data.roundNames && data.roundNames[info.round]) {
+                        return data.roundNames[info.round];
+                    }
+
+                    // Default round naming for finals
+                    if (info.fractionOfFinal === 1) {
+                        return 'Final';
+                    } else if (info.fractionOfFinal === 1/2) {
+                        return 'Semi Finals';
+                    } else if (info.fractionOfFinal === 1/4) {
+                        return 'Quarter Finals';
+                    }
+                },
+                selector: '#bracketsViewerContainer',
+                participantOriginPlacement: 'before',
+                separatedChildCountLabel: true,
+                showSlotsOrigin: true,
+                showLowerBracketSlotsOrigin: true,
+                highlightParticipantOnHover: true,
+                onMatchClick: match => console.log('Match clicked:', match)
+            });
+
+            console.log("Tournament bracket rendered successfully");
+            return true;
+        } catch (error) {
+            console.error("Error rendering tournament bracket:", error);
+            return false;
+        }
+    };
+</script>
+
+@code {
+    [Parameter]
+    public int TournamentId { get; set; }
+
+    private TournamentDetailDto? tournament;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private Dictionary<int, int?> matchWinners = new();
+    private Dictionary<int, MatchScores> matchScores = new();
+
+    // Local class to store match scores
+    private class MatchScores
+    {
+        public int Player1Score { get; set; }
+        public int Player2Score { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTournament();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && tournament != null && tournament.Matches?.Any() == true)
+        {
+            // Wait for BracketsViewer to load
+            const int maxAttempts = 50;
+            int attempts = 0;
+            bool isLoaded = false;
+
+            while (!isLoaded && attempts < maxAttempts)
+            {
+                isLoaded = await JSRuntime.InvokeAsync<bool>("isBracketsViewerLoaded");
+                if (!isLoaded) await Task.Delay(100);
+                attempts++;
+            }
+
+            if (!isLoaded)
+            {
+                errorMessage = "Failed to load bracket viewer library";
+                StateHasChanged();
+                return;
+            }
+
+            try
+            {
+                // Convert tournament to brackets-viewer format
+                var bracketData = ConvertToBracketViewerFormat();
+
+                // Serialize data
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    Converters = { new JsonStringEnumConverter() }
+                };
+
+                var serializedData = JsonSerializer.Serialize(bracketData, options);
+
+                // Render the bracket
+                await JSRuntime.InvokeVoidAsync("renderTournamentBracket", serializedData);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error rendering bracket: {ex.Message}";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LoadTournament()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() },
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            tournament = await HttpClient.GetFromJsonAsync<TournamentDetailDto>(
+                $"api/Tournament/{TournamentId}", options);
+
+            if (tournament == null)
+            {
+                errorMessage = "Tournament not found";
+                return;
+            }
+
+            if (tournament.Matches == null || !tournament.Matches.Any())
+            {
+                try
+                {
+                    var matches = await HttpClient.GetFromJsonAsync<List<MatchDto>>(
+                        $"api/Tournament/{TournamentId}/Matches", options);
+                    tournament.Matches = matches ?? new List<MatchDto>();
+                }
+                catch
+                {
+                    tournament.Matches = new List<MatchDto>();
+                }
+            }
+
+            await LoadMatchDetailsAndWinners();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tournament: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadMatchDetailsAndWinners()
+    {
+        if (tournament?.Matches == null) return;
+
+        foreach (var match in tournament.Matches)
+        {
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new JsonStringEnumConverter() },
+                    ReferenceHandler = ReferenceHandler.Preserve
+                };
+
+                var matchDetail = await HttpClient.GetFromJsonAsync<MatchDetailDto>(
+                    $"api/Matches/{match.Id}", options);
+
+                if (matchDetail?.Sets?.Any() == true)
+                {
+                    // Calculate scores from sets
+                    int player1Score = 0;
+                    int player2Score = 0;
+
+                    foreach (var set in matchDetail.Sets)
+                    {
+                        if (set.Player1Games > set.Player2Games)
+                        {
+                            player1Score++;
+                        }
+                        else if (set.Player2Games > set.Player1Games)
+                        {
+                            player2Score++;
+                        }
+                    }
+
+                    // Store scores
+                    matchScores[match.Id] = new MatchScores
+                    {
+                        Player1Score = player1Score,
+                        Player2Score = player2Score
+                    };
+
+                    bool isMatchCompleted = matchDetail.Sets.All(s => s.IsCompleted);
+                    if (isMatchCompleted)
+                    {
+                        int player1Wins = matchDetail.Sets.Count(s => s.WinnerId == 1);
+                        int player2Wins = matchDetail.Sets.Count(s => s.WinnerId == 2);
+
+                        if (player1Wins > player2Wins)
+                        {
+                            matchWinners[match.Id] = match.Player1Id;
+                        }
+                        else if (player2Wins > player1Wins)
+                        {
+                            matchWinners[match.Id] = match.Player2Id;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                continue;
+            }
+        }
+    }
+
+    private object ConvertToBracketViewerFormat()
+    {
+        // Determine the number of rounds based on the number of matches
+        var matches = tournament?.Matches?.ToList() ?? new List<MatchDto>();
+
+        // Get unique players
+        var playerIds = new HashSet<int>();
+        foreach (var match in matches)
+        {
+            if (match.Player1Id > 0) playerIds.Add(match.Player1Id);
+            if (match.Player2Id > 0) playerIds.Add(match.Player2Id);
+        }
+
+        int playerCount = playerIds.Count;
+        int numberOfRounds = (int)Math.Ceiling(Math.Log2(playerCount));
+
+        // Create participants list
+        var participants = new List<object>();
+        foreach (var playerId in playerIds)
+        {
+            string playerName = "Player " + playerId;
+            // Try to get player name from matches
+            var match = matches.FirstOrDefault(m => m.Player1Id == playerId || m.Player2Id == playerId);
+            if (match != null)
+            {
+                playerName = match.Player1Id == playerId ? match.Player1Name : match.Player2Name;
+            }
+
+            participants.Add(new
+            {
+                id = playerId,
+                tournament_id = TournamentId,
+                name = playerName
+            });
+        }
+
+        // Create stage
+        var stage = new[] {
+            new {
+                id = 0,
+                tournament_id = TournamentId,
+                name = tournament?.Name ?? "Tournament",
+                type = "single_elimination",
+                number = 1,
+                settings = new {
+                    size = playerCount,
+                    seedOrdering = new[] { "natural" },
+                    grandFinal = "simple",
+                    matchesChildCount = 0
+                }
+            }
+        };
+
+        // Create match structure
+        var tournamentMatches = new List<object>();
+        var roundNames = new Dictionary<int, string>();
+
+        // Sort matches by round and position
+        var sortedMatches = OrganizeMatchesIntoRounds(matches, numberOfRounds);
+
+        int matchId = 0;
+        for (int round = 0; round < numberOfRounds; round++)
+        {
+            string roundName = round == numberOfRounds - 1 ? "Final" :
+                round == numberOfRounds - 2 ? "Semi-Finals" :
+                round == numberOfRounds - 3 ? "Quarter-Finals" :
+                $"Round {round + 1}";
+            roundNames[round + 1] = roundName;
+
+            var roundMatches = sortedMatches.Where(m => m.Round == round).ToList();
+
+            foreach (var bracketMatch in roundMatches)
+            {
+                int status = 0; // Not started
+
+                // Determine match status based on whether we have winner information
+                if (bracketMatch.Match != null)
+                {
+                    // Check if match has a winner
+                    bool hasWinner = matchWinners.ContainsKey(bracketMatch.Match.Id);
+
+                    // Check if match has started (based on match time)
+                    bool hasStarted = bracketMatch.Match.MatchTime < DateTime.Now;
+
+                    status = hasWinner ? 4 : // Completed
+                        hasStarted ? 3 : // In progress
+                        2; // Ready
+                }
+
+                // Get scores for this match
+                int player1Score = 0;
+                int player2Score = 0;
+                if (bracketMatch.Match != null && matchScores.TryGetValue(bracketMatch.Match.Id, out var scores))
+                {
+                    player1Score = scores.Player1Score;
+                    player2Score = scores.Player2Score;
+                }
+
+                // Create match object
+                tournamentMatches.Add(new
+                {
+                    id = matchId++,
+                    number = bracketMatch.Position + 1,
+                    stage_id = 0,
+                    group_id = 0,
+                    round_id = round,
+                    round = round + 1,
+                    child_count = 0,
+                    status = status,
+                    opponent1 = bracketMatch.Match?.Player1Id > 0 ? new
+                        {
+                            id = bracketMatch.Match.Player1Id,
+                            position = 1,
+                            score = player1Score,
+                            result = matchWinners.TryGetValue(bracketMatch.Match.Id, out var winner1) &&
+                                     winner1 == bracketMatch.Match.Player1Id ? "win" :
+                                (winner1.HasValue ? "loss" : (string)null)
+                        } : null,
+                    opponent2 = bracketMatch.Match?.Player2Id > 0 ? new
+                        {
+                            id = bracketMatch.Match.Player2Id,
+                            position = 2,
+                            score = player2Score,
+                            result = matchWinners.TryGetValue(bracketMatch.Match.Id, out var winner2) &&
+                                     winner2 == bracketMatch.Match.Player2Id ? "win" :
+                                (winner2.HasValue ? "loss" : (string)null)
+                        } : null
+                });
+            }
+        }
+
+        // Add group data required by the library
+        var groups = new[]
+        {
+            new { id = 0, stage_id = 0, number = 1 }
+        };
+
+        // Add round data
+        var rounds = new List<object>();
+        for (int r = 0; r < numberOfRounds; r++)
+        {
+            rounds.Add(new
+            {
+                id = r,
+                number = r + 1,
+                stage_id = 0,
+                group_id = 0
+            });
+        }
+
+        // Create the final data structure
+        return new
+        {
+            stage = stage,
+            match = tournamentMatches,
+            match_game = new object[] { },
+            participant = participants,
+            group = groups,
+            round = rounds
+        };
+    }
+
+    private List<BracketMatch> OrganizeMatchesIntoRounds(List<MatchDto> matches, int numberOfRounds)
+    {
+        var result = new List<BracketMatch>();
+        var playerLastRound = new Dictionary<int, int>();
+        var winnerProgression = new Dictionary<int, int>();
+
+        // First pass: Assign clear first-round matches
+        var firstRoundMatches = new List<BracketMatch>();
+        foreach (var match in matches.OrderBy(m => m.MatchTime))
+        {
+            if (!playerLastRound.ContainsKey(match.Player1Id) &&
+                !playerLastRound.ContainsKey(match.Player2Id))
+            {
+                var bracketMatch = new BracketMatch
+                {
+                    Match = match,
+                    Position = firstRoundMatches.Count,
+                    Round = 0
+                };
+
+                firstRoundMatches.Add(bracketMatch);
+                result.Add(bracketMatch);
+
+                playerLastRound[match.Player1Id] = 0;
+                playerLastRound[match.Player2Id] = 0;
+
+                if (matchWinners.TryGetValue(match.Id, out var winnerId) && winnerId.HasValue)
+                {
+                    winnerProgression[winnerId.Value] = 0;
+                }
+            }
+        }
+
+        // Second pass: Assign subsequent round matches
+        for (int round = 1; round < numberOfRounds; round++)
+        {
+            var roundMatches = new List<BracketMatch>();
+
+            foreach (var match in matches.OrderBy(m => m.MatchTime))
+            {
+                // Skip matches already assigned
+                if (result.Any(r => r.Match?.Id == match.Id))
+                    continue;
+
+                bool player1AdvancedFromPreviousRound = winnerProgression.TryGetValue(match.Player1Id, out int p1Round) &&
+                                                        p1Round == round - 1;
+                bool player2AdvancedFromPreviousRound = winnerProgression.TryGetValue(match.Player2Id, out int p2Round) &&
+                                                        p2Round == round - 1;
+
+                if (player1AdvancedFromPreviousRound || player2AdvancedFromPreviousRound)
+                {
+                    var bracketMatch = new BracketMatch
+                    {
+                        Match = match,
+                        Position = roundMatches.Count,
+                        Round = round
+                    };
+
+                    roundMatches.Add(bracketMatch);
+                    result.Add(bracketMatch);
+
+                    if (matchWinners.TryGetValue(match.Id, out var winnerId) && winnerId.HasValue)
+                    {
+                        winnerProgression[winnerId.Value] = round;
+                    }
+
+                    continue;
+                }
+            }
+
+            // Calculate the expected number of matches in this round
+            int expectedMatches = (int)Math.Pow(2, numberOfRounds - round - 1);
+
+            // Add placeholder matches if needed
+            while (roundMatches.Count < expectedMatches)
+            {
+                var placeholderMatch = new BracketMatch
+                {
+                    Match = null,
+                    Position = roundMatches.Count,
+                    Round = round
+                };
+
+                roundMatches.Add(placeholderMatch);
+                result.Add(placeholderMatch);
+            }
+        }
+
+        return result;
+    }
+
+    private class BracketMatch
+    {
+        public MatchDto? Match { get; set; }
+        public int Position { get; set; }
+        public int Round { get; set; }
+    }
+}

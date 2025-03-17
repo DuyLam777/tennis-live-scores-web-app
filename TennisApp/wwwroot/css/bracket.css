@@ -1,0 +1,56 @@
+/* Custom theme for brackets-viewer to match application colors */
+.brackets-viewer {
+    /* Colors */
+    --primary-background: var(--background, #181825);
+    --secondary-background: var(--surface, #1e1e2e);
+    --match-background: var(--surface, #1e1e2e);
+    --font-color: var(--text, #cdd6f4);
+    --win-color: var(--success, #a6e3a1);
+    --loss-color: var(--danger, #f38ba8);
+    --label-color: #9aa5ce;
+    --hint-color: #9aa5ce;
+    --connector-color: var(--overlay, #313244);
+    --border-color: var(--overlay, #313244);
+    --border-hover-color: var(--primary, #89b4fa);
+
+    /* Sizes */
+    --text-size: 12px;
+    --round-margin: 40px;
+    --match-width: 150px;
+    --match-horizontal-padding: 8px;
+    --match-vertical-padding: 6px;
+    --connector-border-width: 2px;
+    --match-border-width: 1px;
+    --match-border-radius: 0.5em;
+}
+
+/* Add hover effects to matches */
+.brackets-viewer .match {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.brackets-viewer .match:hover {
+    transform: translateY(-2px);
+}
+
+/* Improve the contrast for match names */
+.brackets-viewer .opponent-name {
+    font-weight: 500;
+}
+
+/* Add a subtle gradient to the background */
+.brackets-viewer {
+    background: linear-gradient(to bottom, var(--background, #181825), var(--surface, #1e1e2e));
+}
+
+/* Improve the appearance of round titles */
+.brackets-viewer .round-title {
+    font-weight: 600;
+    color: var(--primary, #89b4fa);
+    padding-bottom: 0.5rem;
+}
+
+/* Add a highlight effect for winners */
+.brackets-viewer .opponent.win {
+    background-color: rgba(166, 227, 161, 0.1);
+}
