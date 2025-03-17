@@ -15,11 +15,10 @@
 }
 
 .dashboard-section {
-    background-color: var(--overlay);
+    background-color: transparent;
     border-radius: 0.75rem;
     padding: 1.5rem;
     margin-bottom: 2rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .dashboard-section h2 {
@@ -36,6 +35,9 @@
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 0;
+    border-radius: 12px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    background-color: var(--surface);
 }
 
 .carousel {
@@ -107,17 +109,6 @@
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.match-card.ongoing {
-    border-color: var(--primary);
-}
-
-.match-card.upcoming {
-    border-color: var(--tertiary);
-}
-
-.match-card.completed {
-    border-color: var(--success);
-}
 
 .match-card-header {
     background-color: var(--overlay);
@@ -129,7 +120,7 @@
 
 .match-time {
     font-weight: 600;
-    color: var(--tertiary);
+    color: var(--text);
 }
 
 .match-location {
@@ -228,25 +219,9 @@
     font-size: 0.9rem;
 }
 
-.match-status {
-    color: var(--success);
-    font-weight: 600;
-}
-
-.completed-status {
-    color: var(--success);
-}
-
 .match-duration {
     color: var(--text);
     opacity: 0.8;
-}
-
-.status-live {
-    color: var(--danger);
-    font-weight: 700;
-    position: relative;
-    padding-left: 0.8rem;
 }
 
 .status-live::before {
@@ -361,4 +336,39 @@
 
 .page-dot {
     background-color: var(--text);
+}
+
+/* Animation for card transition */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Loading Spinner Styles */
+.loading-spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--overlay);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spinner 1s linear infinite;
+}
+
+.loading-text {
+    margin-left: 1rem;
+    color: var(--text);
+    font-style: italic;
+}
+
+@keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

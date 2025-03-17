@@ -170,9 +170,13 @@ a,
 }
 
 .action-button {
-    margin-right: 0.5rem;
-    border-radius: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    color: var(--background) !important;
 }
 
 /* Badge styling */
@@ -688,4 +692,43 @@ main {
 .content {
     padding-top: 2rem;
     /* Add space below navbar */
+}
+
+.match-card.ongoing {
+    border-color: var(--danger) !important;
+}
+
+.match-card.upcoming {
+    border-color: var(--tertiary) !important;
+}
+
+.match-card.completed {
+    border-color: var(--success) !important;
+}
+
+.match-status {
+    color: var(--tertiary);
+    font-weight: 600;
+}
+
+.completed-status {
+    color: var(--success);
+}
+
+
+.status-live {
+    color: var(--danger);
+    font-weight: 700;
+    position: relative;
+    padding-left: 0.8rem;
+}
+
+.status-canceled {
+    color: var(--secondary);
+    font-weight: 700;
+}
+
+.action-button:hover {
+    filter: brightness(110%);
+    transform: translateY(-1px);
 }

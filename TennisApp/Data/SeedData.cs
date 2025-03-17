@@ -781,7 +781,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = pastMatch1.Player1Id,  // John Doe
             };
             context.Set.Add(pastMatch1Set1);
 
@@ -794,7 +794,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = pastMatch1.Player1Id,  // John Doe
             };
             context.Set.Add(pastMatch1Set2);
 
@@ -804,7 +804,7 @@ namespace TennisApp.Data
                 PointsPlayer1 = new List<string> { "15", "30", "40" },
                 PointsPlayer2 = new List<string> { "0", "15", "30" },
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = pastMatch1.Player1Id,  // John Doe
             };
             pastMatch1Set1.Games.Add(pastMatch1Set1Game1);
 
@@ -818,7 +818,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = pastMatch2.Player1Id,  // Jane Smith
             };
             context.Set.Add(pastMatch2Set1);
 
@@ -831,7 +831,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 2,
+                WinnerId = pastMatch2.Player2Id,  // Emma Williams
             };
             context.Set.Add(pastMatch2Set2);
 
@@ -844,7 +844,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = pastMatch2.Player1Id,  // Jane Smith
             };
             context.Set.Add(pastMatch2Set3);
 
@@ -858,7 +858,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 2,
+                WinnerId = pastMatch3.Player2Id,  // Alexander Miller
             };
             context.Set.Add(pastMatch3Set1);
 
@@ -871,7 +871,7 @@ namespace TennisApp.Data
                 Player1Games = 2,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 2,
+                WinnerId = pastMatch3.Player2Id,  // Alexander Miller
             };
             context.Set.Add(pastMatch3Set2);
 
@@ -886,7 +886,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 4,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = ongoingMatch1.Player1Id,  // John Doe
             };
             context.Set.Add(ongoingMatch1Set1);
 
@@ -899,7 +899,7 @@ namespace TennisApp.Data
                 Player1Games = 3,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 2,
+                WinnerId = ongoingMatch1.Player2Id,  // Carlos Rodriguez
             };
             context.Set.Add(ongoingMatch1Set2);
 
@@ -973,7 +973,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 3,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = ongoingMatch4.Player1Id,  // Naomi Tanaka
             };
             context.Set.Add(ongoingMatch4Set1);
 
@@ -1026,7 +1026,7 @@ namespace TennisApp.Data
                 Player1Games = 7,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = ongoingMatch6.Player1Id,  // Ana Costa
             };
             context.Set.Add(ongoingMatch6Set1);
 
@@ -1039,7 +1039,7 @@ namespace TennisApp.Data
                 Player1Games = 4,
                 Player2Games = 6,
                 IsCompleted = true,
-                WinnerId = 2,
+                WinnerId = ongoingMatch6.Player2Id,  // Serena Davis
             };
             context.Set.Add(ongoingMatch6Set2);
 
@@ -1072,7 +1072,7 @@ namespace TennisApp.Data
                 Player1Games = 6,
                 Player2Games = 2,
                 IsCompleted = true,
-                WinnerId = 1,
+                WinnerId = ongoingMatch7.Player1Id,  // Felix Hansen
             };
             context.Set.Add(ongoingMatch7Set1);
 

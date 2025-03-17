@@ -1,216 +1,51 @@
-﻿<div class="top-navbar">
+<link rel="stylesheet" href="css/navbar.css">
+
 <div class="top-navbar">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center">
-            <!-- Brand with icon -->
-            <a class="navbar-brand" href="">
-                <span class="bi bi-tennis-ball" style="color: var(--primary);"></span>
-                <span class="brand-text">TennisApp</span>
-            </a>
+        <div class="navbar-content">
+            <!-- Section 1: Brand (Left) -->
+            <div class="navbar-section brand-section">
+                <a class="navbar-brand" href="">
+                    <span class="bi bi-tennis-ball" style="color: var(--primary);"></span>
+                    <span class="brand-text">TennisApp</span>
+                </a>
+            </div>
 
-            <!-- Navigation items -->
-            <nav class="d-flex">
-                <div class="nav-items-container">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="nav-icon bi bi-house-door"></span>
-                        <span class="nav-text">Dashboard</span>
-                    </NavLink>
-                    <NavLink class="nav-link" href="matches">
-                        <span class="nav-icon bi bi-calendar-event"></span>
-                        <span class="nav-text">Matches</span>
-                    </NavLink>
-                    <NavLink class="nav-link" href="tournaments">
-                        <span class="nav-icon bi bi-pin-map"></span>
-                        <span class="nav-text">Tournaments</span>
-                    </NavLink>
-                    <NavLink class="nav-link" href="players">
-                        <span class="nav-icon bi bi-people"></span>
-                        <span class="nav-text">Players</span>
-                    </NavLink>
-                    <NavLink class="nav-link" href="courts">
-                        <span class="nav-icon bi bi-pin-map"></span>
-                        <span class="nav-text">Courts</span>
-                    </NavLink>
-                    <NavLink class="nav-link" href="about">
-                        <span class="nav-icon bi bi-info-circle"></span>
-                        <span class="nav-text">About</span>
-                    </NavLink>
-                </div>
-            </nav>
+            <!-- Section 2: Navigation items (Middle) -->
+            <div class="navbar-section nav-section">
+                <nav class="navbar-section-content">
+                    <div class="nav-items-container">
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                            <span class="nav-icon bi bi-house-door"></span>
+                            <span class="nav-text">Dashboard</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="matches">
+                            <span class="nav-icon bi bi-calendar-event"></span>
+                            <span class="nav-text">Matches</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="tournaments">
+                            <span class="nav-icon bi bi-pin-map"></span>
+                            <span class="nav-text">Tournaments</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="players">
+                            <span class="nav-icon bi bi-people"></span>
+                            <span class="nav-text">Players</span>
+                        </NavLink>
+                        <NavLink class="nav-link" href="courts">
+                            <span class="nav-icon bi bi-pin-map"></span>
+                            <span class="nav-text">Courts</span>
+                        </NavLink>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Section 3: About (Right) -->
+            <div class="navbar-section about-section">
+                <a class="navbar-brand" href="about">
+                    <span class="bi bi-tennis-ball" style="color: var(--primary);"></span>
+                    <span class="brand-text">About</span>
+                </a>
+            </div>
         </div>
     </div>
-    </div>
 </div>
-
-<style>
-    .top-navbar {
-        background-color: var(--surface);
-        padding: 0.8rem 0;
-        border-bottom: 1px solid var(--overlay);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .navbar-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text) !important;
-    }
-
-    .brand-text {
-        color: var(--primary);
-    }
-
-    .nav-items-container {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .nav-link {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text) !important;
-        padding: 0.75rem 1.25rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        text-decoration: none;
-    }
-
-    .nav-link:hover {
-        background-color: var(--overlay);
-        color: var(--primary) !important;
-        transform: translateY(-2px);
-    }
-
-    .nav-link.active {
-        background-color: var(--primary);
-        color: var(--surface) !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .nav-icon {
-        font-size: 1.2rem;
-        transition: color 0.3s ease;
-    }
-
-    .nav-text {
-        font-size: 1rem;
-        font-weight: 500;
-    }
-
-    /* Mobile responsive styles */
-    @@media(max - width: 768px) {
-            .navbar-brand {
-                font-size: 1.2rem;
-                gap: 0.5rem;
-            }
-
-            .nav-items-container {
-                gap: 0.5rem;
-            }
-
-            .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
-
-            .nav-text {
-                display: none;
-                /* Hide text on mobile */
-            }
-
-            .nav-icon {
-                font-size: 1.4rem;
-                /* Make icons larger on mobile */
-            }
-        }
-    </style>
-<style>
-    .top-navbar {
-        background-color: var(--surface);
-        padding: 0.8rem 0;
-        border-bottom: 1px solid var(--overlay);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .navbar-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text) !important;
-    }
-
-    .brand-text {
-        color: var(--primary);
-    }
-
-    .nav-items-container {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .nav-link {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text) !important;
-        padding: 0.75rem 1.25rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        text-decoration: none;
-    }
-
-    .nav-link:hover {
-        background-color: var(--overlay);
-        color: var(--primary) !important;
-        transform: translateY(-2px);
-    }
-
-    .nav-link.active {
-        background-color: var(--primary);
-        color: var(--surface) !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .nav-icon {
-        font-size: 1.2rem;
-        transition: color 0.3s ease;
-    }
-
-    .nav-text {
-        font-size: 1rem;
-        font-weight: 500;
-    }
-
-    /* Mobile responsive styles */
-    @@media(max - width: 768px) {
-            .navbar-brand {
-                font-size: 1.2rem;
-                gap: 0.5rem;
-            }
-
-            .nav-items-container {
-                gap: 0.5rem;
-            }
-
-            .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
-
-            .nav-text {
-                display: none;
-                /* Hide text on mobile */
-            }
-
-            .nav-icon {
-                font-size: 1.4rem;
-                /* Make icons larger on mobile */
-            }
-        }
-    </style>
