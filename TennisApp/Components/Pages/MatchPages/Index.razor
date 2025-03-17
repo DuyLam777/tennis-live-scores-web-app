@@ -1,4 +1,7 @@
 @page "/matches"
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
 @inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @using Microsoft.EntityFrameworkCore
 @using TennisApp.Data
@@ -6,13 +9,22 @@
 @implements IDisposable
 
 <PageTitle>Matches</PageTitle>
+<link rel="stylesheet" href="css/matches-page.css">
 
 <div class="page-container">
-    <h1>Match Schedule</h1>
+    <div class="header">
+        <h1>All Matches</h1>
+    </div>
 
-    <p>
+    <div class="actions-container">
+        <div class="search-bar">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Search by player name..." />
+            <button class="search-button" @onclick="HandleSearch">
+                <span>Search</span>
+            </button>
+        </div>
         <a href="/matches/create" class="btn btn-primary">Create New Match</a>
-    </p>
+    </div>
 
     @if (isLoading)
     {
@@ -21,176 +33,115 @@
     else
     {
         <div class="match-grid">
-            @foreach (var match in matchesQuery)
+            @foreach (var match in filteredMatches)
             {
                 <div class="match-card @GetMatchStatusClass(match)">
-                    <div class="match-header">
-                        <span class="match-time">@match.MatchTime.ToString("dd MMM yyyy, HH:mm")</span>
-                        <span class="match-status">@GetMatchStatus(match)</span>
+                    <div class="match-card-header">
+                        <div class="match-time">@match.MatchTime.ToString("MMM dd, HH:mm")</div>
+                        <div class="match-location">@(match.Court?.Name ?? "Court TBD")</div>
                     </div>
-                    <div class="match-teams">
-                        <div class="team">
-                            <span class="team-name">@(match.Player1?.Name ?? "TBD")</span>
+                    <div class="player player-top">
+                        <div class="player-info">
+                            <div class="player-name">@(match.Player1?.Name ?? "Player 1")</div>
+                            @if (match.Player1 != null && !string.IsNullOrEmpty(match.Player1.Country))
+                            {
+                                <div class="player-country">@match.Player1.Country</div>
+                            }
                         </div>
-                        <div class="vs">vs</div>
-                        <div class="team">
-                            <span class="team-name">@(match.Player2?.Name ?? "TBD")</span>
+                        @if (HasSets(match))
+                        {
+                            <div class="player-score">
+                                @foreach (var set in GetMatchSets(match))
+                                {
+                                    <span class="set-score">@set.Player1Games</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="match-vs">VS</div>
+                    <div class="player player-bottom">
+                        <div class="player-info">
+                            <div class="player-name">@(match.Player2?.Name ?? "Player 2")</div>
+                            @if (match.Player2 != null && !string.IsNullOrEmpty(match.Player2.Country))
+                            {
+                                <div class="player-country">@match.Player2.Country</div>
+                            }
                         </div>
+                        @if (HasSets(match))
+                        {
+                            <div class="player-score">
+                                @foreach (var set in GetMatchSets(match))
+                                {
+                                    <span class="set-score">@set.Player2Games</span>
+                                }
+                            </div>
+                        }
                     </div>
-                    <div class="match-details">
-                        <span class="court">Court: @(match.Court?.Name ?? "TBD")</span>
-                        <span class="scoreboard">Scoreboard: @match.ScoreboardId</span>
-                    </div>
-                    <div class="match-actions">
-                        <a href="/matches/edit/@match.Id" class="btn btn-primary btn-sm">Edit</a>
-                        <a href="/matches/details/@match.Id" class="btn btn-info btn-sm">Details</a>
-                        <a href="/matches/delete/@match.Id" class="btn btn-danger btn-sm">Delete</a>
+                    <div class="match-footer">
+                        @{
+                            var matchStatus = GetMatchStatus(match);
+                        }
+                        <div class="match-status @(matchStatus == "LIVE" ? "status-live" : matchStatus == "Completed" ? "completed-status" : "")">
+                            @GetMatchStatus(match)
+                        </div>
+                        <div class="match-actions">
+                            <a href="/matches/edit/@match.Id" class="action-button edit-btn">Edit</a>
+                            <a href="/matches/details/@match.Id" class="action-button details-btn">Details</a>
+                            <a href="/matches/delete/@match.Id" class="action-button delete-btn">Delete</a>
+                        </div>
                     </div>
                 </div>
             }
         </div>
+        
+        @if (!filteredMatches.Any())
+        {
+            <div class="no-results">
+                <p>No matches found. Try a different search term.</p>
+            </div>
+        }
     }
 </div>
 
-<style>
-    .page-container {
-        background-color: #181825 !important;
-        color: #cdd6f4 !important;
-        min-height: 100vh !important;
-        padding: 1.5rem !important;
-    }
-
-    .match-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .match-card {
-        background-color: #1e1e2e !important;
-        border-radius: 0.75rem !important;
-        padding: 1.5rem !important;
-        transition: transform 0.2s, box-shadow 0.2s !important;
-    }
-
-    .match-card:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .match-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .match-time {
-        font-size: 0.9rem;
-        color: #cdd6f4 !important;
-    }
-
-    .match-status {
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.5rem;
-        font-weight: bold;
-    }
-
-    .match-status.live {
-        background-color: #f38ba8 !important;
-        color: #181825 !important;
-    }
-
-    .match-status.upcoming {
-        background-color: #89b4fa !important;
-        color: #181825 !important;
-    }
-
-    .match-status.completed {
-        background-color: #a6e3a1 !important;
-        color: #181825 !important;
-    }
-
-    .match-teams {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .team {
-        text-align: center;
-    }
-
-    .team-name {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: #cdd6f4 !important;
-    }
-
-    .vs {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #cdd6f4 !important;
-    }
-
-    .match-details {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.9rem;
-        color: #cdd6f4 !important;
-        margin-bottom: 1rem;
-    }
-
-    .match-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .btn-primary {
-        background-color: #89b4fa !important;
-        border-color: #89b4fa !important;
-        color: #181825 !important;
-    }
-
-    .btn-info {
-        background-color: #74c7ec !important;
-        border-color: #74c7ec !important;
-        color: #181825 !important;
-    }
-
-    .btn-danger {
-        background-color: #f38ba8 !important;
-        border-color: #f38ba8 !important;
-        color: #181825 !important;
-    }
-
-    .btn-sm {
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.875rem !important;
-    }
-</style>
-
 @code {
-    private IQueryable<Match> matchesQuery = null!;
-    private bool isLoading = true;
     private TennisAppContext dbContext = null!;
+    private IQueryable<Match> matchesQuery = null!;
+    private List<Match> filteredMatches = new List<Match>();
+    private bool isLoading = true;
+    private string searchQuery = "";
 
     protected override async Task OnInitializedAsync()
     {
         // Create a dedicated context that will live for the component's lifetime
         dbContext = await DbContextFactory.CreateDbContextAsync();
         
-        // Create the query - don't execute it yet
+        // Create the query
         matchesQuery = dbContext.Match
             .Include(m => m.Court)
             .Include(m => m.Player1)
             .Include(m => m.Player2)
+            .Include(m => m.Sets)
             .AsQueryable();
             
+        filteredMatches = await matchesQuery.ToListAsync();
         isLoading = false;
+    }
+
+    private async Task HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredMatches = await matchesQuery.ToListAsync();
+        }
+        else
+        {
+            string query = searchQuery.ToLower();
+            filteredMatches = await matchesQuery
+                .Where(m => 
+                    (m.Player1 != null && m.Player1.Name != null && m.Player1.Name.ToLower().Contains(query)) || 
+                    (m.Player2 != null && m.Player2.Name != null && m.Player2.Name.ToLower().Contains(query)))
+                .ToListAsync();
+        }
     }
 
     public void Dispose()
@@ -201,18 +152,66 @@
 
     private string GetMatchStatus(Match match)
     {
-        // Logic to determine match status (live, upcoming, completed)
-        if (match.MatchTime > DateTime.Now)
-            return "Upcoming";
-        else if (match.MatchTime.AddHours(2) > DateTime.Now)
-            return "Live";
-        else
+        // Use similar logic to Dashboard.razor
+        var currentTime = DateTime.Now;
+        
+        if (IsMatchCompleted(match))
             return "Completed";
+        else if (IsMatchLive(match))
+            return "LIVE";
+        else if (match.MatchTime > currentTime)
+            return "Upcoming";
+        else
+            return "Starting soon";
     }
 
     private string GetMatchStatusClass(Match match)
     {
         // Return CSS class based on match status
-        return GetMatchStatus(match).ToLower();
+        var status = GetMatchStatus(match);
+        
+        if (status == "Completed")
+            return "completed";
+        else if (status == "LIVE" || status == "Starting soon")
+            return "ongoing";
+        else
+            return "upcoming";
+    }
+    
+    private bool IsMatchCompleted(Match match)
+    {
+        // Similar to Dashboard.razor IsMatchCompleted method
+        if (match.Sets == null || !match.Sets.Any())
+            return false;
+
+        // Check if all sets are completed first
+        if (match.Sets.Any(s => !s.IsCompleted))
+            return false;
+
+        // Count wins for each player
+        int? player1Id = match.Player1?.Id;
+        int? player2Id = match.Player2?.Id;
+
+        int player1Wins = match.Sets.Count(s => s.WinnerId == player1Id);
+        int player2Wins = match.Sets.Count(s => s.WinnerId == player2Id);
+
+        // Match is completed if either player has at least 2 set wins
+        return player1Wins >= 2 || player2Wins >= 2;
+    }
+    
+    private bool IsMatchLive(Match match)
+    {
+        // Similar to Dashboard.razor IsMatchLive method
+        return match.Sets != null && match.Sets.Any(s => !s.IsCompleted);
+    }
+    
+    private bool HasSets(Match match)
+    {
+        return match.Sets != null && match.Sets.Any();
+    }
+    
+    private IEnumerable<Set> GetMatchSets(Match match)
+    {
+        return match.Sets ?? Enumerable.Empty<Set>();
     }
 }

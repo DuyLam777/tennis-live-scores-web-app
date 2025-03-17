@@ -60,11 +60,11 @@ td {
 }
 
 .court-available {
-    border-left: 5px solid #a6e3a1 !important;
+    box-shadow: 0px 2px 8px #a6e3a1 !important;
 }
 
 .court-occupied {
-    border-left: 5px solid #f38ba8 !important;
+    box-shadow: 0px 2px 8px #f38ba8 !important;
 }
 
 /* Badge styling */

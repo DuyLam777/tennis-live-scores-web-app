@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using TennisApp.Models
 @using System.Text.Json
+@using Newtonsoft.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
@@ -13,19 +14,18 @@
 
     <div class="dashboard-section">
         <h2>Ongoing Matches</h2>
-        @if (ongoingMatches == null)
+        @if (ongoingMatches == null || !ongoingMatches.Any())
         {
-            <p><em>Loading ongoing matches...</em></p>
-        }
-        else if (!ongoingMatches.Any())
-        {
-            <p>No ongoing matches at the moment.</p>
+            <div class="loading-spinner-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading ongoing matches...</div>
+            </div>
         }
         else
         {
             <div class="carousel-container">
                 <button class="carousel-control left"
-                    @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage - 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
+                        @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage - 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
                     <span>&lt;</span>
                 </button>
                 <div class="carousel">
@@ -73,7 +73,7 @@
                                     </div>
                                 </div>
                                 <div class="match-footer">
-                                    <div class="match-status @(IsMatchLive(match) ? "status-live" : "")">
+                                    <div class="match-status @(IsMatchLive(match) ? "status-live" : "status-live")">
                                         @(IsMatchLive(match) ? "LIVE" : "Starting soon")
                                     </div>
                                     <div class="match-sets">
@@ -85,7 +85,7 @@
                     </div>
                 </div>
                 <button class="carousel-control right"
-                    @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage + 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
+                        @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage + 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
                     <span>&gt;</span>
                 </button>
             </div>
@@ -94,7 +94,7 @@
                 {
                     int pageNumber = i;
                     <span class="page-dot @(ongoingCurrentPage == pageNumber ? "active" : "")"
-                        @onclick="() => NavigateToPage(ongoingMatches, pageNumber, ref ongoingCurrentPage, ref ongoingTranslateX)"></span>
+                          @onclick="() => NavigateToPage(ongoingMatches, pageNumber, ref ongoingCurrentPage, ref ongoingTranslateX)"></span>
                 }
             </div>
         }
@@ -102,19 +102,18 @@
 
     <div class="dashboard-section">
         <h2>Upcoming Matches</h2>
-        @if (upcomingMatches == null)
+        @if (upcomingMatches == null || !upcomingMatches.Any())
         {
-            <p><em>Loading upcoming matches...</em></p>
-        }
-        else if (!upcomingMatches.Any())
-        {
-            <p>No upcoming matches scheduled.</p>
+            <div class="loading-spinner-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading upcoming matches...</div>
+            </div>
         }
         else
         {
             <div class="carousel-container">
                 <button class="carousel-control left"
-                    @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage - 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
+                        @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage - 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
                     <span>&lt;</span>
                 </button>
                 <div class="carousel">
@@ -162,7 +161,7 @@
                     </div>
                 </div>
                 <button class="carousel-control right"
-                    @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage + 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
+                        @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage + 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
                     <span>&gt;</span>
                 </button>
             </div>
@@ -171,7 +170,7 @@
                 {
                     int pageNumber = i;
                     <span class="page-dot @(upcomingCurrentPage == pageNumber ? "active" : "")"
-                        @onclick="() => NavigateToPage(upcomingMatches, pageNumber, ref upcomingCurrentPage, ref upcomingTranslateX)"></span>
+                          @onclick="() => NavigateToPage(upcomingMatches, pageNumber, ref upcomingCurrentPage, ref upcomingTranslateX)"></span>
                 }
             </div>
         }
@@ -179,19 +178,18 @@
 
     <div class="dashboard-section">
         <h2>Finished Matches</h2>
-        @if (finishedMatches == null)
+        @if (finishedMatches == null || !finishedMatches.Any())
         {
-            <p><em>Loading finished matches...</em></p>
-        }
-        else if (!finishedMatches.Any())
-        {
-            <p>No finished matches to display.</p>
+            <div class="loading-spinner-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading finished matches...</div>
+            </div>
         }
         else
         {
             <div class="carousel-container">
                 <button class="carousel-control left"
-                    @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage - 1, ref finishedCurrentPage, ref finishedTranslateX)">
+                        @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage - 1, ref finishedCurrentPage, ref finishedTranslateX)">
                     <span>&lt;</span>
                 </button>
                 <div class="carousel">
@@ -251,7 +249,7 @@
                     </div>
                 </div>
                 <button class="carousel-control right"
-                    @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage + 1, ref finishedCurrentPage, ref finishedTranslateX)">
+                        @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage + 1, ref finishedCurrentPage, ref finishedTranslateX)">
                     <span>&gt;</span>
                 </button>
             </div>
@@ -260,7 +258,7 @@
                 {
                     int pageNumber = i;
                     <span class="page-dot @(finishedCurrentPage == pageNumber ? "active" : "")"
-                        @onclick="() => NavigateToPage(finishedMatches, pageNumber, ref finishedCurrentPage, ref finishedTranslateX)"></span>
+                          @onclick="() => NavigateToPage(finishedMatches, pageNumber, ref finishedCurrentPage, ref finishedTranslateX)"></span>
                 }
             </div>
         }
@@ -294,6 +292,8 @@
         await LoadMatches();
     }
 
+    // Replace the LoadMatches method with this updated version
+
     private async Task LoadMatches()
     {
         try
@@ -302,19 +302,157 @@
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                var deserializedMatches = JsonSerializer.Deserialize<List<MatchViewModel>>(
-                content,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
 
-                // Null check before assignment
-                allMatches = deserializedMatches ?? new List<MatchViewModel>();
+                try
+                {
+                    // Use System.Text.Json instead of Newtonsoft.Json
+                    var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        };
+
+                    using (var jsonDoc = JsonDocument.Parse(content))
+                    {
+                        var root = jsonDoc.RootElement;
+
+                        if (root.TryGetProperty("$values", out var valuesElement))
+                        {
+                            allMatches = new List<MatchViewModel>();
+
+                            foreach (var matchElement in valuesElement.EnumerateArray())
+                            {
+                                var match = new MatchViewModel
+                                    {
+                                        Id = matchElement.GetProperty("id").GetInt32(),
+                                        MatchTime = matchElement.GetProperty("matchTime").GetDateTime(),
+                                        Sets = new List<SetViewModel>()
+                                    };
+
+                                // Parse court
+                                if (matchElement.TryGetProperty("court", out var courtElement) &&
+                                    courtElement.ValueKind != JsonValueKind.Null)
+                                {
+                                    match.Court = new CourtViewModel
+                                        {
+                                            Id = courtElement.GetProperty("id").GetInt32(),
+                                            Name = courtElement.GetProperty("name").GetString(),
+                                            IsIndoor = courtElement.GetProperty("isIndoor").GetBoolean()
+                                        };
+                                }
+
+                                // Parse player1
+                                if (matchElement.TryGetProperty("player1", out var player1Element) &&
+                                    player1Element.ValueKind != JsonValueKind.Null)
+                                {
+                                    match.Player1 = new PlayerViewModel
+                                        {
+                                            Id = player1Element.GetProperty("id").GetInt32(),
+                                            Name = player1Element.GetProperty("name").GetString()
+                                        };
+
+                                    if (player1Element.TryGetProperty("country", out var countryElement) &&
+                                        countryElement.ValueKind != JsonValueKind.Null)
+                                    {
+                                        match.Player1.Country = countryElement.GetString();
+                                    }
+                                }
+
+                                // Parse player2
+                                if (matchElement.TryGetProperty("player2", out var player2Element) &&
+                                    player2Element.ValueKind != JsonValueKind.Null)
+                                {
+                                    match.Player2 = new PlayerViewModel
+                                        {
+                                            Id = player2Element.GetProperty("id").GetInt32(),
+                                            Name = player2Element.GetProperty("name").GetString()
+                                        };
+
+                                    if (player2Element.TryGetProperty("country", out var countryElement) &&
+                                        countryElement.ValueKind != JsonValueKind.Null)
+                                    {
+                                        match.Player2.Country = countryElement.GetString();
+                                    }
+                                }
+
+                                // Parse sets
+                                if (matchElement.TryGetProperty("sets", out var setsElement) &&
+                                    setsElement.ValueKind != JsonValueKind.Null &&
+                                    setsElement.TryGetProperty("$values", out var setsValuesElement))
+                                {
+                                    foreach (var setElement in setsValuesElement.EnumerateArray())
+                                    {
+                                        var setViewModel = new SetViewModel
+                                            {
+                                                Id = setElement.GetProperty("id").GetInt32(),
+                                                SetNumber = setElement.GetProperty("setNumber").GetInt32(),
+                                                Player1Games = setElement.GetProperty("player1Games").GetInt32(),
+                                                Player2Games = setElement.GetProperty("player2Games").GetInt32(),
+                                                IsCompleted = setElement.GetProperty("isCompleted").GetBoolean()
+                                            };
+
+                                        if (setElement.TryGetProperty("winnerId", out var winnerIdElement) &&
+                                            winnerIdElement.ValueKind != JsonValueKind.Null)
+                                        {
+                                            setViewModel.WinnerId = winnerIdElement.GetInt32();
+                                        }
+
+                                        match.Sets.Add(setViewModel);
+                                    }
+                                }
+
+                                allMatches.Add(match);
+                            }
+                        }
+                        else
+                        {
+                            // If there's no $values property, try parsing as a direct array
+                            allMatches = System.Text.Json.JsonSerializer.Deserialize<List<MatchViewModel>>(content, options) ?? new List<MatchViewModel>();
+                        }
+                    }
+
+                    Console.WriteLine($"Successfully parsed {allMatches.Count} matches");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"JSON parsing error: {ex.Message}");
+                    Console.WriteLine($"JSON content: {content.Substring(0, Math.Min(500, content.Length))}...");
+
+                    // As a last resort, try deserializing with Newtonsoft directly to List<MatchViewModel>
+                    try
+                    {
+                        var settings = new Newtonsoft.Json.JsonSerializerSettings
+                            {
+                                ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
+                                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                            };
+
+                        // Try to deserialize directly to a list instead of using the ReferenceList wrapper
+                        // This might work if the JSON is actually an array of matches at the root level
+                        var jsonObject = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(content, settings);
+
+                        if (jsonObject?.GetProperty("$values") != null)
+                        {
+                            // If it has a $values property, extract that
+                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(
+                                Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject["$values"]), settings);
+                        }
+                        else
+                        {
+                            // Otherwise, try deserializing the whole thing as a list
+                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(content, settings) ?? new List<MatchViewModel>();
+                        }
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        Console.WriteLine($"Fallback parsing also failed: {fallbackEx.Message}");
+                        allMatches = new List<MatchViewModel>();
+                    }
+                }
 
                 // Get current time for comparison
                 var currentTime = DateTime.Now;
 
                 // Apply the updated match classification logic
-
                 // Upcoming: Matches with no sets AND match time is more than 10 minutes in the future
                 upcomingMatches = allMatches
                 .Where(m => (m.Sets == null || !m.Sets.Any()) &&
@@ -337,16 +475,96 @@
                 .Where(m => IsMatchCompleted(m))
                 .OrderByDescending(m => m.MatchTime) // Most recent first
                 .ToList();
+
+                Console.WriteLine($"Categorized matches: {upcomingMatches.Count} upcoming, {ongoingMatches.Count} ongoing, {finishedMatches.Count} finished");
             }
             else
             {
                 Console.WriteLine($"Error loading matches: {response.StatusCode}");
+                Console.WriteLine($"Response content: {await response.Content.ReadAsStringAsync()}");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Exception while loading matches: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
+    }
+
+    // Also update the ReferenceList class to match the JSON structure better
+    public class ReferenceList<T>
+    {
+        [Newtonsoft.Json.JsonProperty("$id")]
+        public string? Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("$values")]
+        public List<T> Values { get; set; } = new List<T>();
+    }
+
+    public class MatchViewModel
+    {
+        [Newtonsoft.Json.JsonProperty("id")]
+        public int Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("matchTime")]
+        public DateTime MatchTime { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("court")]
+        public CourtViewModel? Court { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("player1")]
+        public PlayerViewModel? Player1 { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("player2")]
+        public PlayerViewModel? Player2 { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("sets")]
+        public List<SetViewModel> Sets { get; set; } = new List<SetViewModel>();
+    }
+
+    public class CourtViewModel
+    {
+        [Newtonsoft.Json.JsonProperty("id")]
+        public int Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("name")]
+        public string? Name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("isIndoor")]
+        public bool IsIndoor { get; set; }
+    }
+
+    public class PlayerViewModel
+    {
+        [Newtonsoft.Json.JsonProperty("id")]
+        public int Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("name")]
+        public string? Name { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("country")]
+        public string? Country { get; set; }
+    }
+
+    public class SetViewModel
+    {
+        [Newtonsoft.Json.JsonProperty("id")]
+        public int Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("setNumber")]
+        public int SetNumber { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("player1Games")]
+        public int Player1Games { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("player2Games")]
+        public int Player2Games { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("isCompleted")]
+        public bool IsCompleted { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("winnerId")]
+        public int? WinnerId { get; set; }
     }
 
     private void NavigateCarousel(List<MatchViewModel> matches, int targetPage, ref int currentPage, ref int translateX)
@@ -422,7 +640,7 @@
 
     private string GetCountdownText(DateTime matchTime)
     {
-        var timeUntilMatch = matchTime - DateTime.UtcNow;
+        var timeUntilMatch = matchTime - DateTime.Now;
 
         if (timeUntilMatch.TotalDays >= 1)
         {
@@ -447,40 +665,5 @@
         int player2Sets = match.Sets.Count(s => s.IsCompleted && s.WinnerId == match.Player2?.Id);
 
         return $"{player1Sets}-{player2Sets}";
-    }
-
-    // View model classes to match the JSON structure from the API
-    private class MatchViewModel
-    {
-        public int Id { get; set; }
-        public DateTime MatchTime { get; set; }
-        public CourtViewModel? Court { get; set; }
-        public PlayerViewModel? Player1 { get; set; }
-        public PlayerViewModel? Player2 { get; set; }
-        public List<SetViewModel> Sets { get; set; } = new List<SetViewModel>();
-    }
-
-    private class CourtViewModel
-    {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        public bool IsIndoor { get; set; }
-    }
-
-    private class PlayerViewModel
-    {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        public string? Country { get; set; }
-    }
-
-    private class SetViewModel
-    {
-        public int Id { get; set; }
-        public int SetNumber { get; set; }
-        public int Player1Games { get; set; }
-        public int Player2Games { get; set; }
-        public bool IsCompleted { get; set; }
-        public int? WinnerId { get; set; }
     }
 }

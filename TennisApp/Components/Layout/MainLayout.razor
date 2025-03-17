@@ -1,14 +1,12 @@
 ﻿@inherits LayoutComponentBase
 
+<link rel="stylesheet" href="css/mainlayout.css">
 <div class="page">
-    <!-- Removed sidebar -->
+    <header class="sticky-header">
+        <NavMenu />
+    </header>
     
     <main>
-        <!-- Navigation moved to top -->
-        <header>
-            <NavMenu />
-        </header>
-
         <article class="content px-4">
             @Body
         </article>
