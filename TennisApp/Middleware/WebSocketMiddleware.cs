@@ -73,19 +73,20 @@ public class WebSocketMiddleware
     {
         try
         {
-            _logger.LogInformation("Processing message: {Message}", message);
             var parts = message.Split(',');
 
-            // Validate message structure: [matchId],Set,11,Games, [6 segments]
-            if (parts.Length != 10 || !int.TryParse(parts[0], out int matchId))
+            // Validate basic message structure
+            if (parts.Length < 5 || !int.TryParse(parts[0], out int matchId))
             {
-                _logger.LogError("Invalid message format. Expected 10 parts.");
+                _logger.LogError("Invalid message format");
+                _logger.LogError("Message: {Message}", message);
                 return;
             }
 
-            // Get match with the latest incomplete set
+            // Get match with related data
             var match = await dbContext
-                .Match.Include(m => m.Sets)
+                .Set<Match>()
+                .Include(m => m.Sets)
                 .ThenInclude(s => s.Games)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
 
@@ -95,94 +96,89 @@ public class WebSocketMiddleware
                 return;
             }
 
-            // Get or create the current set (latest incomplete)
-            var currentSet = match.Sets.LastOrDefault(s => !s.IsCompleted);
-            if (currentSet == null)
+            // Parse set scores (format: "21" = player1: 2, player2: 1)
+            if (
+                parts[2].Length != 2
+                || !int.TryParse(parts[2][0].ToString(), out int reportedP1Sets)
+                || !int.TryParse(parts[2][1].ToString(), out int reportedP2Sets)
+            )
             {
-                currentSet = new Set
-                {
-                    SetNumber = match.Sets.Count + 1,
-                    Match = match,
-                    StartTime = DateTime.UtcNow,
-                };
-                match.Sets.Add(currentSet);
-                _logger.LogInformation("Created new set #{SetNumber}", currentSet.SetNumber);
+                _logger.LogError("Invalid set score format");
+                return;
             }
 
-            // Reset current set state (games are replaced by incoming data)
-            currentSet.Player1Games = 0;
-            currentSet.Player2Games = 0;
-            currentSet.Games.Clear();
+            // Get current set state
+            var completedSets = match.Sets.Where(s => s.IsCompleted).ToList();
+            var currentSet = match.Sets.FirstOrDefault(s => !s.IsCompleted);
 
-            // Process the 6 game segments (positions 4-9)
-            var gameSegments = parts.Skip(4).Take(6).ToList();
-            _logger.LogInformation(
-                "Processing {Count} game segments for set #{SetNumber}",
-                gameSegments.Count,
-                currentSet.SetNumber
-            );
-
-            foreach (var segment in gameSegments)
+            // Create new sets if needed
+            int totalReportedSets = reportedP1Sets + reportedP2Sets;
+            while (match.Sets.Count < totalReportedSets)
             {
-                if (segment.Length != 2)
+                var newSet = new Set { SetNumber = match.Sets.Count + 1, Match = match };
+                match.Sets.Add(newSet);
+            }
+
+            // Process game segments (starting from index 4)
+            for (int i = 4; i < parts.Length; i++)
+            {
+                int setIndex = i - 4;
+                if (setIndex >= match.Sets.Count)
+                    break;
+
+                var set = match.Sets[setIndex];
+                var segment = parts[i];
+
+                // Parse game segment (format: "10" = player1: 1, player2: 0)
+                if (
+                    segment.Length != 2
+                    || !int.TryParse(segment[0].ToString(), out int p1Games)
+                    || !int.TryParse(segment[1].ToString(), out int p2Games)
+                )
                 {
-                    _logger.LogWarning("Invalid segment format: {Segment}", segment);
+                    _logger.LogWarning("Invalid game segment format: {Segment}", segment);
                     continue;
                 }
 
-                char p1Win = segment[0];
-                char p2Win = segment[1];
+                // Update set games
+                set.Player1Games = p1Games;
+                set.Player2Games = p2Games;
 
-                // Add games based on segment values
-                if (p1Win == '1')
+                // Automatically determine set winner if conditions met
+                if (!set.IsCompleted)
                 {
-                    currentSet.Player1Games++;
-                    currentSet.Games.Add(new Game { WinnerId = 1, IsCompleted = true });
-                    _logger.LogDebug("Added Player 1 game");
+                    set.DetermineSetWinner();
+                    if (set.IsCompleted)
+                    {
+                        set.EndTime = DateTime.UtcNow;
+                    }
                 }
-                if (p2Win == '1')
+
+                // Create games if needed
+                while (set.Games.Count < Math.Max(p1Games, p2Games))
                 {
-                    currentSet.Player2Games++;
-                    currentSet.Games.Add(new Game { WinnerId = 2, IsCompleted = true });
-                    _logger.LogDebug("Added Player 2 game");
+                    var newGame = set.NewGame();
+                    newGame.WinnerId = set.Games.Count < p1Games ? 1 : 2;
+                    newGame.IsCompleted = true;
                 }
             }
 
-            // Special case: All left or all right digits are '1'
-            bool allLeftWins = gameSegments.All(s => s[0] == '1');
-            bool allRightWins = gameSegments.All(s => s[1] == '1');
-
-            if (allLeftWins || allRightWins)
+            // Update set completion states
+            foreach (var set in match.Sets)
             {
-                currentSet.WinnerId = allLeftWins ? 1 : 2;
-                currentSet.IsCompleted = true;
-                currentSet.EndTime = DateTime.UtcNow;
-                _logger.LogInformation(
-                    "Set {SetNumber} completed via segment sweep. Winner: {Winner}",
-                    currentSet.SetNumber,
-                    currentSet.WinnerId
-                );
-            }
-            else
-            {
-                // Fallback to standard tennis rules
-                currentSet.DetermineSetWinner();
-                if (currentSet.IsCompleted)
+                if (!set.IsCompleted && set.SetNumber <= totalReportedSets)
                 {
-                    _logger.LogInformation(
-                        "Set {SetNumber} completed via standard rules. Winner: {Winner}",
-                        currentSet.SetNumber,
-                        currentSet.WinnerId
-                    );
+                    set.StartTime ??= DateTime.UtcNow;
+                    set.DetermineSetWinner();
                 }
             }
 
             await dbContext.SaveChangesAsync();
-            _logger.LogInformation("Match {MatchId} updated successfully", matchId);
+            _logger.LogInformation("Successfully updated match {MatchId}", matchId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message");
+            _logger.LogError(ex, "Error processing WebSocket message");
         }
     }
 }
