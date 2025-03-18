@@ -21,14 +21,12 @@ public class WebSocketMiddleware
         if (context.WebSockets.IsWebSocketRequest && context.Request.Path == "/ws")
         {
             _logger.LogInformation("WebSocket connection request received");
-            _logger.LogInformation("Path: {Path}", context.Request.Path);
             var webSocket = await context.WebSockets.AcceptWebSocketAsync();
             await HandleWebSocketAsync(webSocket, dbContext);
         }
         else
         {
             _logger.LogInformation("Not a WebSocket request or incorrect path");
-            _logger.LogInformation("Path: {Path}", context.Request.Path);
             await _next(context);
         }
     }
@@ -73,20 +71,18 @@ public class WebSocketMiddleware
     {
         try
         {
+            _logger.LogInformation("Processing message: {Message}", message);
             var parts = message.Split(',');
 
-            // Validate basic message structure
-            if (parts.Length < 5 || !int.TryParse(parts[0], out int matchId))
+            // Validate message structure
+            if (parts.Length != 10 || !int.TryParse(parts[0], out int matchId))
             {
-                _logger.LogError("Invalid message format");
-                _logger.LogError("Message: {Message}", message);
+                _logger.LogError("Invalid message format. Expected 10 parts.");
                 return;
             }
 
-            // Get match with related data
             var match = await dbContext
-                .Set<Match>()
-                .Include(m => m.Sets)
+                .Match.Include(m => m.Sets)
                 .ThenInclude(s => s.Games)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
 
@@ -96,89 +92,136 @@ public class WebSocketMiddleware
                 return;
             }
 
-            // Parse set scores (format: "21" = player1: 2, player2: 1)
-            if (
-                parts[2].Length != 2
-                || !int.TryParse(parts[2][0].ToString(), out int reportedP1Sets)
-                || !int.TryParse(parts[2][1].ToString(), out int reportedP2Sets)
-            )
+            // Handle set deletion
+            if (parts[2] == "00")
             {
-                _logger.LogError("Invalid set score format");
+                dbContext.Set.RemoveRange(match.Sets);
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation("Deleted all sets for match {MatchId}", matchId);
                 return;
             }
 
-            // Get current set state
-            var completedSets = match.Sets.Where(s => s.IsCompleted).ToList();
-            var currentSet = match.Sets.FirstOrDefault(s => !s.IsCompleted);
+            // Set management
+            var currentSet = match.Sets.LastOrDefault(s => !s.IsCompleted);
+            var shouldCreateNewSet = false;
 
-            // Create new sets if needed
-            int totalReportedSets = reportedP1Sets + reportedP2Sets;
-            while (match.Sets.Count < totalReportedSets)
+            if (currentSet == null)
             {
-                var newSet = new Set { SetNumber = match.Sets.Count + 1, Match = match };
-                match.Sets.Add(newSet);
-            }
-
-            // Process game segments (starting from index 4)
-            for (int i = 4; i < parts.Length; i++)
-            {
-                int setIndex = i - 4;
-                if (setIndex >= match.Sets.Count)
-                    break;
-
-                var set = match.Sets[setIndex];
-                var segment = parts[i];
-
-                // Parse game segment (format: "10" = player1: 1, player2: 0)
-                if (
-                    segment.Length != 2
-                    || !int.TryParse(segment[0].ToString(), out int p1Games)
-                    || !int.TryParse(segment[1].ToString(), out int p2Games)
-                )
+                var previousSet = match.Sets.LastOrDefault();
+                if (previousSet != null && !previousSet.IsCompleted)
                 {
-                    _logger.LogWarning("Invalid game segment format: {Segment}", segment);
-                    continue;
-                }
-
-                // Update set games
-                set.Player1Games = p1Games;
-                set.Player2Games = p2Games;
-
-                // Automatically determine set winner if conditions met
-                if (!set.IsCompleted)
-                {
-                    set.DetermineSetWinner();
-                    if (set.IsCompleted)
+                    previousSet.DetermineSetWinner();
+                    if (!previousSet.IsCompleted)
                     {
-                        set.EndTime = DateTime.UtcNow;
+                        // Fallback to first-to-3 rule
+                        if (
+                            previousSet.Player1Games >= 3
+                            && previousSet.Player1Games - previousSet.Player2Games >= 2
+                        )
+                        {
+                            previousSet.WinnerId = 1;
+                            previousSet.IsCompleted = true;
+                            previousSet.EndTime = DateTime.UtcNow;
+                        }
+                        else if (
+                            previousSet.Player2Games >= 3
+                            && previousSet.Player2Games - previousSet.Player1Games >= 2
+                        )
+                        {
+                            previousSet.WinnerId = 2;
+                            previousSet.IsCompleted = true;
+                            previousSet.EndTime = DateTime.UtcNow;
+                        }
+                    }
+
+                    if (previousSet.IsCompleted)
+                    {
+                        _logger.LogInformation(
+                            "Completed previous set {SetNumber}",
+                            previousSet.SetNumber
+                        );
+                        shouldCreateNewSet = true;
                     }
                 }
-
-                // Create games if needed
-                while (set.Games.Count < Math.Max(p1Games, p2Games))
+                else
                 {
-                    var newGame = set.NewGame();
-                    newGame.WinnerId = set.Games.Count < p1Games ? 1 : 2;
-                    newGame.IsCompleted = true;
+                    shouldCreateNewSet = true;
+                }
+
+                if (shouldCreateNewSet)
+                {
+                    currentSet = new Set
+                    {
+                        SetNumber = match.Sets.Count + 1,
+                        Match = match,
+                        StartTime = DateTime.UtcNow,
+                    };
+                    match.Sets.Add(currentSet);
+                    _logger.LogInformation("Created new set #{SetNumber}", currentSet.SetNumber);
                 }
             }
 
-            // Update set completion states
-            foreach (var set in match.Sets)
+            if (currentSet == null)
             {
-                if (!set.IsCompleted && set.SetNumber <= totalReportedSets)
+                _logger.LogError("Failed to create or find current set");
+                return;
+            }
+
+            // Reset current set
+            currentSet.Player1Games = 0;
+            currentSet.Player2Games = 0;
+            currentSet.Games.Clear();
+
+            // Process game segments
+            var gameSegments = parts.Skip(4).Take(6).ToList();
+            foreach (var segment in gameSegments)
+            {
+                if (segment.Length != 2)
+                    continue;
+
+                if (segment[0] == '1')
                 {
-                    set.StartTime ??= DateTime.UtcNow;
-                    set.DetermineSetWinner();
+                    currentSet.Player1Games++;
+                    currentSet.Games.Add(new Game { WinnerId = 1, IsCompleted = true });
+                }
+                if (segment[1] == '1')
+                {
+                    currentSet.Player2Games++;
+                    currentSet.Games.Add(new Game { WinnerId = 2, IsCompleted = true });
+                }
+            }
+
+            // Determine set winner
+            currentSet.DetermineSetWinner();
+
+            // First-to-3-games override
+            if (!currentSet.IsCompleted)
+            {
+                if (
+                    currentSet.Player1Games >= 3
+                    && currentSet.Player1Games - currentSet.Player2Games >= 2
+                )
+                {
+                    currentSet.WinnerId = 1;
+                    currentSet.IsCompleted = true;
+                    currentSet.EndTime = DateTime.UtcNow;
+                }
+                else if (
+                    currentSet.Player2Games >= 3
+                    && currentSet.Player2Games - currentSet.Player1Games >= 2
+                )
+                {
+                    currentSet.WinnerId = 2;
+                    currentSet.IsCompleted = true;
+                    currentSet.EndTime = DateTime.UtcNow;
                 }
             }
 
             await dbContext.SaveChangesAsync();
-            _logger.LogInformation("Successfully updated match {MatchId}", matchId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing WebSocket message");
+            _logger.LogError(ex, "Error processing message");
         }
     }
 }
