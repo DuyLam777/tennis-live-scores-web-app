@@ -48,7 +48,7 @@
                         @if (HasSets(match))
                         {
                             <div class="player-score">
-                                @foreach (var set in GetMatchSets(match))
+                                @foreach (var set in GetMatchSets(match).OrderBy(s => s.SetNumber))
                                 {
                                     <span class="set-score">@set.Player1Games</span>
                                 }
@@ -67,7 +67,7 @@
                         @if (HasSets(match))
                         {
                             <div class="player-score">
-                                @foreach (var set in GetMatchSets(match))
+                                @foreach (var set in GetMatchSets(match).OrderBy(s => s.SetNumber))
                                 {
                                     <span class="set-score">@set.Player2Games</span>
                                 }

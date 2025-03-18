@@ -71,7 +71,7 @@
                                             }
                                         </div>
                                         <div class="player-score player-score-left">
-                                            @foreach (var set in match.Sets)
+                                            @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
                                             {
                                                 <span class="set-score">@set.Player1Games</span>
                                             }
@@ -84,7 +84,7 @@
                                     <!-- Right player with score on left, name on right -->
                                     <div class="player player-right">
                                         <div class="player-score player-score-right">
-                                            @foreach (var set in match.Sets)
+                                            @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
                                             {
                                                 <span class="set-score">@set.Player2Games</span>
                                             }
