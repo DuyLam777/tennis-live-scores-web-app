@@ -2,42 +2,115 @@
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Create Club</PageTitle>
 
-<h1>Create</h1>
-
-<h4>Club</h4>
+<h1>Create Club</h1>
 <hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Club" OnValidSubmit="AddClub" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
-            <div class="mb-3">
-                <label for="name" class="form-label">Name:</label> 
-                <InputText id="name" @bind-Value="Club.Name" class="form-control" /> 
-                <ValidationMessage For="() => Club.Name" class="text-danger" /> 
-            </div>        
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
-    </div>
-</div>
 
-<div>
-    <a href="/clubs">Back to List</a>
-</div>
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (clubCreated)
+{
+    <div class="alert alert-success">
+        <p>Club created successfully!</p>
+        <a href="/clubs" class="btn btn-primary">Back to Clubs</a>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Club Details</h4>
+                </div>
+                <div class="card-body">
+                    @if (validationErrors.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <EditForm Model="Club" OnValidSubmit="AddClub" FormName="create" Enhance>
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Club Name:</label>
+                            <InputText id="name" @bind-Value="Club.Name" class="form-control" />
+                            <ValidationMessage For="() => Club.Name" class="text-danger" />
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Create Club</button>
+                            <a href="/clubs" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Guide</h4>
+                </div>
+                <div class="card-body">
+                    <p>Create a new club by entering the required information:</p>
+                    <ul>
+                        <li><strong>Club Name:</strong> The official name of the tennis club</li>
+                    </ul>
+                    <p>After creating the club, you'll be able to associate players and tournaments with it.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-
     [SupplyParameterFromForm]
     public Club Club { get; set; } = new();
 
-    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    private bool isLoading = false;
+    private bool clubCreated = false;
+    private List<string> validationErrors = new();
+
     public async Task AddClub()
     {
-        DB.Club.Add(Club);
-        await DB.SaveChangesAsync();
-        NavigationManager.NavigateTo("/clubs");
+        try
+        {
+            isLoading = true;
+
+            if (string.IsNullOrWhiteSpace(Club.Name))
+            {
+                validationErrors.Add("Club name is required");
+                isLoading = false;
+                return;
+            }
+
+            DB.Club.Add(Club);
+            await DB.SaveChangesAsync();
+            clubCreated = true;
+        }
+        catch (Exception ex)
+        {
+            validationErrors.Add($"Error creating club: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }
