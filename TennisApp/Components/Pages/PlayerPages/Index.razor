@@ -16,14 +16,19 @@
 
     <div class="actions-container">
         <div class="search-bar">
-            <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Search by player name..." />
+            <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch"
+                placeholder="Search by player name..." />
             <div class="filter-controls">
-                <select class="form-select" value="@genderFilter" @onchange="async (e) => { genderFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
+                <select class="form-select" value="@genderFilter"
+                    @onchange="async (e) => { genderFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
                     <option value="">All Genders</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
+                    @foreach (var gender in Enum.GetValues(typeof(Gender)))
+                    {
+                        <option value="@gender">@gender</option>
+                    }
                 </select>
-                <select class="form-select" value="@countryFilter" @onchange="async (e) => { countryFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
+                <select class="form-select" value="@countryFilter"
+                    @onchange="async (e) => { countryFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
                     <option value="">All Countries</option>
                     @foreach (var country in countries)
                     {
@@ -93,35 +98,35 @@
     {
         // Create a dedicated context that will live for the component's lifetime
         dbContext = await DbContextFactory.CreateDbContextAsync();
-        
+
         // Create the query
         playersQuery = dbContext.Player.AsQueryable();
-        
+
         // Load all players initially
         filteredPlayers = await playersQuery.ToListAsync();
-        
+
         // Extract unique countries for the filter dropdown
         countries = await dbContext.Player
-                         .Select(p => p.Country)
-                         .Where(c => !string.IsNullOrEmpty(c))
-                         .Distinct()
-                         .OrderBy(c => c)
-                         .ToListAsync();
-        
+        .Select(p => p.Country)
+        .Where(c => !string.IsNullOrEmpty(c))
+        .Distinct()
+        .OrderBy(c => c)
+        .ToListAsync();
+
         isLoading = false;
     }
 
     private async Task HandleSearch()
     {
         IQueryable<Player> query = playersQuery;
-        
+
         // Apply name search filter
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             string searchLower = searchQuery.ToLower();
             query = query.Where(p => p.Name.ToLower().Contains(searchLower));
         }
-        
+
         // Apply gender filter
         if (!string.IsNullOrWhiteSpace(genderFilter))
         {
@@ -130,13 +135,13 @@
                 query = query.Where(p => p.gender == gender);
             }
         }
-        
+
         // Apply country filter
         if (!string.IsNullOrWhiteSpace(countryFilter))
         {
             query = query.Where(p => p.Country == countryFilter);
         }
-        
+
         // Execute the query
         filteredPlayers = await query.ToListAsync();
     }
@@ -146,7 +151,7 @@
         searchQuery = "";
         genderFilter = "";
         countryFilter = "";
-        
+
         // Reset to show all players
         filteredPlayers = await playersQuery.ToListAsync();
     }
