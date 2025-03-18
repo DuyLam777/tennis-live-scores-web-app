@@ -1,75 +1,443 @@
 @page "/matches/details/{Id:int}"
 @inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@rendermode InteractiveServer
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <PageTitle>Match Details</PageTitle>
 
-<h1>Details</h1>
-
-<div>
-    <h4>Match</h4>
-    <hr />
-    @if (match is null)
-    {
-        <p><em>Loading...</em></p>
-    }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">Id</dt>
-            <dd class="col-sm-10">@match.Id</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Player 1</dt>
-            <dd class="col-sm-10">@match.Player1?.Name</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Player 2</dt>
-            <dd class="col-sm-10">@match.Player2?.Name</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Match Time</dt>
-            <dd class="col-sm-10">@match.MatchTime.ToString("g")</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Court</dt>
-            <dd class="col-sm-10">@match.Court?.Name</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Scoreboard</dt>
-            <dd class="col-sm-10">@match.ScoreboardId</dd>
-        </dl>
-        <div>
-            <a href="/matches/edit/@match.Id" class="btn btn-primary">Edit</a> |
-            <a href="/matches/delete/@match.Id" class="btn btn-danger">Delete</a> |
-            <a href="/matches" class="btn btn-secondary">Back to List</a>
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
-    }
-</div>
+    </div>
+}
+else if (match == null)
+{
+    <div class="alert alert-danger">
+        <h4>Match not found.</h4>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p>@errorMessage</p>
+        }
+        <a href="/matches" class="btn btn-primary mt-3">Back to Matches</a>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Match Details</h1>
+            <div>
+                <a href="/matches/edit/@match.Id" class="btn btn-primary me-2">Edit</a>
+                <a href="/matches" class="btn btn-outline-secondary">Back</a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Match Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Match ID</dt>
+                                    <dd>@match.Id</dd>
+
+                                    <dt>Date & Time</dt>
+                                    <dd>@match.MatchTime.ToString("g")</dd>
+
+                                    <dt>Court</dt>
+                                    <dd>@match.CourtName</dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Tournament</dt>
+                                    <dd>
+                                        @if (match.Tournament != null)
+                                        {
+                                            <a href="/tournaments/details/@match.Tournament.Id">@match.Tournament.Name</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not part of a tournament</span>
+                                        }
+                                    </dd>
+
+                                    <dt>Scoreboard ID</dt>
+                                    <dd>@match.ScoreboardIdString</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Players</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-5">
+                                <div class="player-card p-3 border">
+                                    @if (match.Player1 != null)
+                                    {
+                                        <div class="display-6">@match.Player1.Name</div>
+                                        <div>
+                                            <a href="/players/details/@match.Player1.Id" class="btn btn-sm btn-outline-primary mt-2">View Profile</a>
+                                        </div>
+                                        @if (IsWinner(match.Player1Id))
+                                        {
+                                            <div class="mt-2">
+                                                <span class="badge bg-success">Winner <i class="bi bi-trophy-fill text-warning ms-1"></i></span>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted">Player 1 not assigned</div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                                <div class="display-6">VS</div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="player-card p-3 border">
+                                    @if (match.Player2 != null)
+                                    {
+                                        <div class="display-6">@match.Player2.Name</div>
+                                        <div>
+                                            <a href="/players/details/@match.Player2.Id" class="btn btn-sm btn-outline-primary mt-2">View Profile</a>
+                                        </div>
+                                        @if (IsWinner(match.Player2Id))
+                                        {
+                                            <div class="mt-2">
+                                                <span class="badge bg-success">Winner <i class="bi bi-trophy-fill text-warning ms-1"></i></span>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted">Player 2 not assigned</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (match.Scoreboard != null)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Scoreboard</h5>
+                            <a href="/scoreboards/edit/@match.ScoreboardId" class="btn btn-sm btn-success">
+                                <i class="bi bi-pencil"></i> Update Score
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr class="bg-light">
+                                            <th>Set</th>
+                                            <th>@match.Player1Name</th>
+                                            <th>@match.Player2Name</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (match.Sets != null && match.Sets.Any())
+                                        {
+                                            @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
+                                            {
+                                                <tr>
+                                                    <td>Set @set.SetNumber</td>
+                                                    <td>@set.</td>
+                                                    <td>@set.Player2Games</td>
+                                                    <td>
+                                                        @if (set.IsCompleted)
+                                                        {
+                                                            <span class="badge bg-success">Complete</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning">In Progress</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="4" class="text-center">No set data available</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Scoreboard</h5>
+                            <a href="/scoreboards/create?matchId=@match.Id" class="btn btn-sm btn-success">
+                                <i class="bi bi-plus"></i> Create Scoreboard
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                No scoreboard has been created for this match yet.
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Match Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (match.Sets != null && match.Sets.Any())
+                        {
+                            <div>
+                                <h6>Sets Won</h6>
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="display-4">@GetSetsWon(match.Player1Id)</div>
+                                        <div>@match.Player1Name</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="display-4">@GetSetsWon(match.Player2Id)</div>
+                                        <div>@match.Player2Name</div>
+                                    </div>
+                                </div>
+
+                                <h6>Total Games</h6>
+                                <div class="progress mb-3" style="height: 25px;">
+                                    @{
+                                        var player1Games = GetTotalGames(match.Player1Id);
+                                        var player2Games = GetTotalGames(match.Player2Id);
+                                        var totalGames = player1Games + player2Games;
+                                        var player1Percentage = totalGames > 0 ? (player1Games * 100 / totalGames) : 50;
+                                        var player2Percentage = totalGames > 0 ? (player2Games * 100 / totalGames) : 50;
+                                    }
+                                    <div class="progress-bar bg-primary" role="progressbar" 
+                                        style="width: @player1Percentage%">
+                                        @player1Games
+                                    </div>
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                        style="width: @player2Percentage%">
+                                        @player2Games
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                Match statistics will be available once sets have been recorded.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/matches/edit/@match.Id" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> Edit Match
+                            </a>
+                            @if (match.Scoreboard != null)
+                            {
+                                <a href="/scoreboards/edit/@match.ScoreboardId" class="btn btn-success">
+                                    <i class="bi bi-clipboard-data"></i> Update Score
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/scoreboards/create?matchId=@match.Id" class="btn btn-success">
+                                    <i class="bi bi-plus-circle"></i> Create Scoreboard
+                                </a>
+                            }
+                            <button class="btn btn-info" @onclick="GenerateShareLink" type="button">
+                                <i class="bi bi-link"></i> Share Match
+                            </button>
+                            <a href="/matches/delete/@match.Id" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Match
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showShareModal)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share Match</h5>
+                    <button type="button" class="btn-close" @onclick="() => { showShareModal = false; StateHasChanged(); }"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Share this link to allow others to view this match:</p>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" readonly value="@shareUrl" @ref="shareUrlInput" />
+                        <button class="btn btn-outline-primary" @onclick="CopyShareLink" type="button">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                    @if (linkCopied)
+                    {
+                        <div class="alert alert-success">Link copied to clipboard!</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => { showShareModal = false; StateHasChanged(); }">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    private Match? match;
-    private TennisApp.Data.TennisAppContext? dbContext;
-
     [Parameter]
     public int Id { get; set; }
 
+    private Match? match;
+    private TennisApp.Data.TennisAppContext? dbContext;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool showShareModal = false;
+    private string shareUrl = "";
+    private bool linkCopied = false;
+    private ElementReference shareUrlInput;
+
     protected override async Task OnInitializedAsync()
     {
-        dbContext = await DbContextFactory.CreateDbContextAsync();
-        
-        match = await dbContext.Match
-            .Include(m => m.Court)
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
-            .FirstOrDefaultAsync(m => m.Id == Id);
+        await LoadMatch();
+    }
 
-        if (match is null)
+    private async Task LoadMatch()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
         {
-            NavigationManager.NavigateTo("/notfound");
+            dbContext = await DbContextFactory.CreateDbContextAsync();
+            
+            match = await dbContext.Match
+                .Include(m => m.Court)
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Include(m => m.Tournament)
+                .Include(m => m.Scoreboard)
+                .Include(m => m.Sets)
+                .FirstOrDefaultAsync(m => m.Id == Id);
+
+            if (match == null)
+            {
+                errorMessage = "Match not found.";
+            }
         }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading match: {ex.Message}";
+            match = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private bool IsWinner(int playerId)
+    {
+        if (match?.Scoreboard == null) return false;
+        
+        // Determine match winner based on sets won
+        int player1SetsWon = GetSetsWon(match.Player1Id);
+        int player2SetsWon = GetSetsWon(match.Player2Id);
+        
+        if (player1SetsWon > player2SetsWon && playerId == match.Player1Id)
+            return true;
+        else if (player2SetsWon > player1SetsWon && playerId == match.Player2Id)
+            return true;
+            
+        return false;
+    }
+    
+    private int GetSetsWon(int playerId)
+    {
+        if (match?.Sets == null || !match.Sets.Any()) return 0;
+        
+        int setsWon = 0;
+        
+        foreach (var set in match.Sets.Where(s => s.IsCompleted))
+        {
+            if (playerId == match.Player1Id && set.Player1Games > set.Player2Games)
+                setsWon++;
+            else if (playerId == match.Player2Id && set.Player2Games > set.Player1Games)
+                setsWon++;
+        }
+        
+        return setsWon;
+    }
+    
+    private int GetTotalGames(int playerId)
+    {
+        if (match?.Sets == null || !match.Sets.Any()) return 0;
+        
+        int totalGames = 0;
+        
+        foreach (var set in match.Sets)
+        {
+            if (playerId == match.Player1Id)
+                totalGames += set.Player1Games ?? 0;
+            else if (playerId == match.Player2Id)
+                totalGames += set.Player2Games ?? 0;
+        }
+        
+        return totalGames;
+    }
+    
+    private void GenerateShareLink()
+    {
+        var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+        shareUrl = $"{baseUrl}/matches/details/{Id}";
+        showShareModal = true;
+        linkCopied = false;
+    }
+
+    private async Task CopyShareLink()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
+        linkCopied = true;
     }
     
     public void Dispose()

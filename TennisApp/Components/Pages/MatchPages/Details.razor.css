@@ -1,0 +1,9 @@
+.bg-primary {
+    color: var(--background) !important;
+}
+
+/*make border rounded*/
+.border {
+    border-radius: 0.5em;
+    border-color: var(--primary) !important;
+}
