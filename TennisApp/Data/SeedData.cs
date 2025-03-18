@@ -767,22 +767,6 @@ namespace TennisApp.Data
             };
             matches.Add(upcomingMatch10);
 
-            // ABOUT TO START (match starting in 5 minutes)
-            var aboutToStartMatch = new Match
-            {
-                Court = courts[1], // Court 2
-                CourtId = courts[1].Id,
-                MatchTime = now.AddMinutes(5), // Starting in 5 minutes
-                Player1 = players[7], // Olivia Brown
-                Player1Id = players[7].Id,
-                Player2 = players[19], // Priya Sharma
-                Player2Id = players[19].Id,
-                Scoreboard = scoreboards[5],
-                ScoreboardId = scoreboards[5].Id,
-                TournamentId = tournaments[3].Id, // Summer Open (ongoing)
-            };
-            matches.Add(aboutToStartMatch);
-
             context.Match.AddRange(matches);
             context.SaveChanges(); // Save matches to generate IDs
 

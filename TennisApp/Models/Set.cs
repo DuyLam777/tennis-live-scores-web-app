@@ -67,7 +67,7 @@ namespace TennisApp.Models
             }
         }
 
-        private void DetermineSetWinner()
+        public void DetermineSetWinner()
         {
             if (Player1Games >= 6 && Player1Games - Player2Games >= 2)
             {
