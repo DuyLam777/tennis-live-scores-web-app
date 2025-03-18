@@ -747,7 +747,7 @@ else
         if (tournament != null)
         {
             var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
-            shareUrl = $"{baseUrl}/tournaments/view/{tournament.Id}";
+            shareUrl = $"{baseUrl}/tournaments/details/{tournament.Id}";
             showShareModal = true;
             linkCopied = false;
         }

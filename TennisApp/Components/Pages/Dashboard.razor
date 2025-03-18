@@ -12,287 +12,218 @@
         <h1>Tennis Matches Dashboard</h1>
     </div>
 
-    <div class="dashboard-section">
-        <h2>Ongoing Matches</h2>
-        @if (ongoingMatches == null || !ongoingMatches.Any())
-        {
-            <div class="loading-spinner-container">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Loading ongoing matches...</div>
-            </div>
-        }
-        else
-        {
-            <div class="carousel-container">
-                <button class="carousel-control left"
-                        @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage - 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
-                    <span>&lt;</span>
-                </button>
-                <div class="carousel">
-                    @{
-                        int ongoingTotalPages = (int)Math.Ceiling(ongoingMatches.Count / (double)CardsPerPage);
-                    }
+    <div class="dashboard-controls">
+        <div class="search-container">
+            <input type="text" placeholder="Search by player name..." @bind-value="searchTerm"
+                @oninput="OnSearchInput" />
+            <button class="clear-search" @onclick="ClearSearch">×</button>
+        </div>
+    </div>
 
-                    <div class="cards-wrapper" style="transform: translateX(@(ongoingTranslateX)px);">
-                        @foreach (var match in ongoingMatches)
+    <div class="dashboard-section">
+        <h2>All matches @(filteredMatches.Count != allMatches.Count ? $"({filteredMatches.Count} of {allMatches.Count})"
+                        : "")</h2>
+            @if (allMatches == null || !allMatches.Any())
+            {
+                <div class="loading-spinner-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading ongoing matches...</div>
+                </div>
+            }
+            else if (filteredMatches.Count == 0)
+            {
+                <div class="no-results">
+                    <p>No matches found for "@searchTerm"</p>
+                    <button @onclick="ClearSearch">Clear search</button>
+                </div>
+            }
+            else
+            {
+                <div class="match-list-wrapper" @ref="matchListContainer">
+                    <div class="match-list">
+                        @foreach (var match in filteredMatches)
                         {
-                            <div class="match-card ongoing">
+                            string matchStatus = GetMatchStatus(match);
+                            
+                            <div class="match-card @matchStatus @(isLiveMatchRef(match) ? "current-focus" : "")">
                                 <div class="match-card-header">
                                     <div class="match-time">@match.MatchTime.ToString("MMM dd, HH:mm")</div>
                                     <div class="match-location">@(match.Court?.Name ?? "Court TBD")</div>
-                                </div>
-                                <div class="player player-top">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player1?.Name ?? "Player 1")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player1?.Country))
-                                        {
-                                            <div class="player-country">@match.Player1.Country</div>
-                                        }
-                                    </div>
-                                    <div class="player-score">
-                                        @foreach (var set in match.Sets)
-                                        {
-                                            <span class="set-score">@set.Player1Games</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-vs">VS</div>
-                                <div class="player player-bottom">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player2?.Name ?? "Player 2")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player2?.Country))
-                                        {
-                                            <div class="player-country">@match.Player2.Country</div>
-                                        }
-                                    </div>
-                                    <div class="player-score">
-                                        @foreach (var set in match.Sets)
-                                        {
-                                            <span class="set-score">@set.Player2Games</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-footer">
-                                    <div class="match-status @(IsMatchLive(match) ? "status-live" : "status-live")">
-                                        @(IsMatchLive(match) ? "LIVE" : "Starting soon")
+                                    <div class="match-status @(matchStatus == "upcoming" ? "" :
+                                        matchStatus == "completed" ? "completed-status" : "status-live")">
+                                        @(matchStatus == "upcoming" ? GetCountdownText(match.MatchTime) :
+                                        matchStatus == "completed" ? "Finished" : IsMatchLive(match) ? "Live" : "Starting soon")
                                     </div>
                                     <div class="match-sets">
                                         Set @match.Sets.Count of @GetMaxSets(match)
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-                <button class="carousel-control right"
-                        @onclick="() => NavigateCarousel(ongoingMatches, ongoingCurrentPage + 1, ref ongoingCurrentPage, ref ongoingTranslateX)">
-                    <span>&gt;</span>
-                </button>
-            </div>
-            <div class="pagination-indicator">
-                @for (int i = 1; i <= ongoingTotalPages; i++)
-                {
-                    int pageNumber = i;
-                    <span class="page-dot @(ongoingCurrentPage == pageNumber ? "active" : "")"
-                          @onclick="() => NavigateToPage(ongoingMatches, pageNumber, ref ongoingCurrentPage, ref ongoingTranslateX)"></span>
-                }
-            </div>
-        }
-    </div>
 
-    <div class="dashboard-section">
-        <h2>Upcoming Matches</h2>
-        @if (upcomingMatches == null || !upcomingMatches.Any())
-        {
-            <div class="loading-spinner-container">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Loading upcoming matches...</div>
-            </div>
-        }
-        else
-        {
-            <div class="carousel-container">
-                <button class="carousel-control left"
-                        @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage - 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
-                    <span>&lt;</span>
-                </button>
-                <div class="carousel">
-                    @{
-                        int upcomingTotalPages = (int)Math.Ceiling(upcomingMatches.Count / (double)CardsPerPage);
-                    }
+                                <div class="match-players">
+                                    <!-- Left player with name on left, score on right -->
+                                    <div class="player player-left">
+                                        <div class="player-info">
+                                            <div class="player-name">@(match.Player1?.Name ?? "Player 1")</div>
+                                            @if (!string.IsNullOrEmpty(match.Player1?.Country))
+                                            {
+                                                <div class="player-country">@match.Player1.Country</div>
+                                            }
+                                        </div>
+                                        <div class="player-score player-score-left">
+                                            @foreach (var set in match.Sets)
+                                            {
+                                                <span class="set-score">@set.Player1Games</span>
+                                            }
+                                        </div>
+                                    </div>
 
-                    <div class="cards-wrapper" style="transform: translateX(@(upcomingTranslateX)px);">
-                        @foreach (var match in upcomingMatches)
-                        {
-                            <div class="match-card upcoming">
-                                <div class="match-card-header">
-                                    <div class="match-time">@match.MatchTime.ToString("MMM dd, HH:mm")</div>
-                                    <div class="match-location">@(match.Court?.Name ?? "Court TBD")</div>
-                                </div>
-                                <div class="player player-top">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player1?.Name ?? "Player 1")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player1?.Country))
-                                        {
-                                            <div class="player-country">@match.Player1.Country</div>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-vs">VS</div>
-                                <div class="player player-bottom">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player2?.Name ?? "Player 2")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player2?.Country))
-                                        {
-                                            <div class="player-country">@match.Player2.Country</div>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-footer">
-                                    <div class="match-countdown">
-                                        @GetCountdownText(match.MatchTime)
-                                    </div>
-                                    <div class="match-court-type">
-                                        @(match.Court?.IsIndoor == true ? "Indoor" : "Outdoor")
+                                    <!-- VS in middle, absolutely positioned to ensure perfect center alignment -->
+                                    <div class="match-vs">VS</div>
+
+                                    <!-- Right player with score on left, name on right -->
+                                    <div class="player player-right">
+                                        <div class="player-score player-score-right">
+                                            @foreach (var set in match.Sets)
+                                            {
+                                                <span class="set-score">@set.Player2Games</span>
+                                            }
+                                        </div>
+                                        <div class="player-info">
+                                            <div class="player-name">@(match.Player2?.Name ?? "Player 2")</div>
+                                            @if (!string.IsNullOrEmpty(match.Player2?.Country))
+                                            {
+                                                <div class="player-country">@match.Player2.Country</div>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         }
                     </div>
                 </div>
-                <button class="carousel-control right"
-                        @onclick="() => NavigateCarousel(upcomingMatches, upcomingCurrentPage + 1, ref upcomingCurrentPage, ref upcomingTranslateX)">
-                    <span>&gt;</span>
-                </button>
-            </div>
-            <div class="pagination-indicator">
-                @for (int i = 1; i <= upcomingTotalPages; i++)
-                {
-                    int pageNumber = i;
-                    <span class="page-dot @(upcomingCurrentPage == pageNumber ? "active" : "")"
-                          @onclick="() => NavigateToPage(upcomingMatches, pageNumber, ref upcomingCurrentPage, ref upcomingTranslateX)"></span>
-                }
-            </div>
-        }
-    </div>
-
-    <div class="dashboard-section">
-        <h2>Finished Matches</h2>
-        @if (finishedMatches == null || !finishedMatches.Any())
-        {
-            <div class="loading-spinner-container">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Loading finished matches...</div>
-            </div>
-        }
-        else
-        {
-            <div class="carousel-container">
-                <button class="carousel-control left"
-                        @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage - 1, ref finishedCurrentPage, ref finishedTranslateX)">
-                    <span>&lt;</span>
-                </button>
-                <div class="carousel">
-                    @{
-                        int finishedTotalPages = (int)Math.Ceiling(finishedMatches.Count / (double)CardsPerPage);
-                    }
-
-                    <div class="cards-wrapper" style="transform: translateX(@(finishedTranslateX)px);">
-                        @foreach (var match in finishedMatches)
-                        {
-                            <div class="match-card completed">
-                                <div class="match-card-header">
-                                    <div class="match-time">@match.MatchTime.ToString("MMM dd, HH:mm")</div>
-                                    <div class="match-location">@(match.Court?.Name ?? "Court TBD")</div>
-                                </div>
-                                <div class="player player-top @(IsPlayerWinner(match, match.Player1?.Id) ? "winner" : "")">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player1?.Name ?? "Player 1")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player1?.Country))
-                                        {
-                                            <div class="player-country">@match.Player1.Country</div>
-                                        }
-                                    </div>
-                                    <div class="player-score">
-                                        @foreach (var set in match.Sets)
-                                        {
-                                            <span class="set-score">@set.Player1Games</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-vs">VS</div>
-                                <div class="player player-bottom @(IsPlayerWinner(match, match.Player2?.Id) ? "winner" : "")">
-                                    <div class="player-info">
-                                        <div class="player-name">@(match.Player2?.Name ?? "Player 2")</div>
-                                        @if (!string.IsNullOrEmpty(match.Player2?.Country))
-                                        {
-                                            <div class="player-country">@match.Player2.Country</div>
-                                        }
-                                    </div>
-                                    <div class="player-score">
-                                        @foreach (var set in match.Sets)
-                                        {
-                                            <span class="set-score">@set.Player2Games</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="match-footer">
-                                    <div class="match-status completed-status">
-                                        Completed
-                                    </div>
-                                    <div class="match-sets">
-                                        @GetMatchResult(match)
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-                <button class="carousel-control right"
-                        @onclick="() => NavigateCarousel(finishedMatches, finishedCurrentPage + 1, ref finishedCurrentPage, ref finishedTranslateX)">
-                    <span>&gt;</span>
-                </button>
-            </div>
-            <div class="pagination-indicator">
-                @for (int i = 1; i <= finishedTotalPages; i++)
-                {
-                    int pageNumber = i;
-                    <span class="page-dot @(finishedCurrentPage == pageNumber ? "active" : "")"
-                          @onclick="() => NavigateToPage(finishedMatches, pageNumber, ref finishedCurrentPage, ref finishedTranslateX)"></span>
-                }
-            </div>
-        }
+            }
     </div>
 </div>
 
 @code {
     private List<MatchViewModel> allMatches = new List<MatchViewModel>();
-    private List<MatchViewModel> ongoingMatches = new List<MatchViewModel>();
-    private List<MatchViewModel> upcomingMatches = new List<MatchViewModel>();
-    private List<MatchViewModel> finishedMatches = new List<MatchViewModel>();
-
-    // Carousel pagination state
-    private int ongoingCurrentPage = 1;
-    private int upcomingCurrentPage = 1;
-    private int finishedCurrentPage = 1;
-
-    // Carousel animation state (translateX values)
-    private int ongoingTranslateX = 0;
-    private int upcomingTranslateX = 0;
-    private int finishedTranslateX = 0;
-
-    private const int CardsPerPage = 4;
-    // Width of each card plus gap (calculated from CSS)
-    private const int CardWidth = 350; // Wider base card width
-    private const int CardGap = 24; // Gap between cards (1.5rem = 24px)
-    private const int TotalCardWidth = CardWidth + CardGap;
+    private List<MatchViewModel> filteredMatches = new List<MatchViewModel>();
+    private string searchTerm = "";
+    private string sortOption = "timeAsc";
+    
+    // Added for scrolling functionality
+    private ElementReference matchListContainer;
+    private MatchViewModel? liveMatchRef;
+    
+    // Check if a match is the one we want to highlight
+    private bool isLiveMatchRef(MatchViewModel match)
+    {
+        return match == liveMatchRef;
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await LoadMatches();
     }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // First render completed, now wait for matches to load
+            await InvokeAsync(StateHasChanged);
+        }
+        else if (filteredMatches.Count > 0 && liveMatchRef == null)
+        {
+            // Find the first live match
+            var firstLiveMatch = filteredMatches.FirstOrDefault(m => GetMatchStatus(m) == "ongoing");
+            if (firstLiveMatch != null)
+            {
+                // Set the reference match to trigger highlighting in the UI
+                liveMatchRef = firstLiveMatch;
+                
+                // Request a UI update to apply the current-focus class
+                await InvokeAsync(StateHasChanged);
+                
+                // Use the browser's native scrollIntoView API
+                try
+                {
+                    // Find the current-focus element and scroll to it
+                    await JSRuntime.InvokeVoidAsync("eval", 
+                        "setTimeout(() => { " +
+                        "  const element = document.querySelector('.current-focus'); " +
+                        "  if (element) { " +
+                        "    element.scrollIntoView({ behavior: 'smooth', block: 'center' }); " +
+                        "  }" +
+                        "}, 100);");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error scrolling to match: {ex.Message}");
+                }
+            }
+        }
+    }
 
-    // Replace the LoadMatches method with this updated version
+    protected override void OnParametersSet()
+    {
+        FilterMatches();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterMatches();
+    }
+
+    private void OnSortChanged(ChangeEventArgs e)
+    {
+        sortOption = e.Value?.ToString() ?? "timeAsc";
+        FilterMatches();
+    }
+
+    private void SortChanged(ChangeEventArgs e)
+    {
+        FilterMatches();
+    }
+
+    private void FilterMatches()
+    {
+        // Apply search filter
+        var filtered = allMatches;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            string term = searchTerm.Trim().ToLower();
+            filtered = filtered.Where(m =>
+            (m.Player1?.Name?.ToLower()?.Contains(term) ?? false) ||
+            (m.Player2?.Name?.ToLower()?.Contains(term) ?? false)
+            ).ToList();
+        }
+
+        // Apply sorting
+        switch (sortOption)
+        {
+            case "timeDesc":
+                filtered = filtered.OrderByDescending(m => m.MatchTime).ToList();
+                break;
+            case "timeAsc":
+            default:
+                filtered = filtered.OrderBy(m => m.MatchTime).ToList();
+                break;
+        }
+
+        filteredMatches = filtered;
+        
+        // Reset the live match reference when filters change
+        liveMatchRef = null;
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        FilterMatches();
+    }
 
     private async Task LoadMatches()
     {
@@ -307,9 +238,9 @@
                 {
                     // Use System.Text.Json instead of Newtonsoft.Json
                     var options = new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        };
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
 
                     using (var jsonDoc = JsonDocument.Parse(content))
                     {
@@ -322,36 +253,36 @@
                             foreach (var matchElement in valuesElement.EnumerateArray())
                             {
                                 var match = new MatchViewModel
-                                    {
-                                        Id = matchElement.GetProperty("id").GetInt32(),
-                                        MatchTime = matchElement.GetProperty("matchTime").GetDateTime(),
-                                        Sets = new List<SetViewModel>()
-                                    };
+                                {
+                                    Id = matchElement.GetProperty("id").GetInt32(),
+                                    MatchTime = matchElement.GetProperty("matchTime").GetDateTime(),
+                                    Sets = new List<SetViewModel>()
+                                };
 
                                 // Parse court
                                 if (matchElement.TryGetProperty("court", out var courtElement) &&
-                                    courtElement.ValueKind != JsonValueKind.Null)
+                                courtElement.ValueKind != JsonValueKind.Null)
                                 {
                                     match.Court = new CourtViewModel
-                                        {
-                                            Id = courtElement.GetProperty("id").GetInt32(),
-                                            Name = courtElement.GetProperty("name").GetString(),
-                                            IsIndoor = courtElement.GetProperty("isIndoor").GetBoolean()
-                                        };
+                                    {
+                                        Id = courtElement.GetProperty("id").GetInt32(),
+                                        Name = courtElement.GetProperty("name").GetString(),
+                                        IsIndoor = courtElement.GetProperty("isIndoor").GetBoolean()
+                                    };
                                 }
 
                                 // Parse player1
                                 if (matchElement.TryGetProperty("player1", out var player1Element) &&
-                                    player1Element.ValueKind != JsonValueKind.Null)
+                                player1Element.ValueKind != JsonValueKind.Null)
                                 {
                                     match.Player1 = new PlayerViewModel
-                                        {
-                                            Id = player1Element.GetProperty("id").GetInt32(),
-                                            Name = player1Element.GetProperty("name").GetString()
-                                        };
+                                    {
+                                        Id = player1Element.GetProperty("id").GetInt32(),
+                                        Name = player1Element.GetProperty("name").GetString()
+                                    };
 
                                     if (player1Element.TryGetProperty("country", out var countryElement) &&
-                                        countryElement.ValueKind != JsonValueKind.Null)
+                                    countryElement.ValueKind != JsonValueKind.Null)
                                     {
                                         match.Player1.Country = countryElement.GetString();
                                     }
@@ -359,16 +290,16 @@
 
                                 // Parse player2
                                 if (matchElement.TryGetProperty("player2", out var player2Element) &&
-                                    player2Element.ValueKind != JsonValueKind.Null)
+                                player2Element.ValueKind != JsonValueKind.Null)
                                 {
                                     match.Player2 = new PlayerViewModel
-                                        {
-                                            Id = player2Element.GetProperty("id").GetInt32(),
-                                            Name = player2Element.GetProperty("name").GetString()
-                                        };
+                                    {
+                                        Id = player2Element.GetProperty("id").GetInt32(),
+                                        Name = player2Element.GetProperty("name").GetString()
+                                    };
 
                                     if (player2Element.TryGetProperty("country", out var countryElement) &&
-                                        countryElement.ValueKind != JsonValueKind.Null)
+                                    countryElement.ValueKind != JsonValueKind.Null)
                                     {
                                         match.Player2.Country = countryElement.GetString();
                                     }
@@ -376,22 +307,22 @@
 
                                 // Parse sets
                                 if (matchElement.TryGetProperty("sets", out var setsElement) &&
-                                    setsElement.ValueKind != JsonValueKind.Null &&
-                                    setsElement.TryGetProperty("$values", out var setsValuesElement))
+                                setsElement.ValueKind != JsonValueKind.Null &&
+                                setsElement.TryGetProperty("$values", out var setsValuesElement))
                                 {
                                     foreach (var setElement in setsValuesElement.EnumerateArray())
                                     {
                                         var setViewModel = new SetViewModel
-                                            {
-                                                Id = setElement.GetProperty("id").GetInt32(),
-                                                SetNumber = setElement.GetProperty("setNumber").GetInt32(),
-                                                Player1Games = setElement.GetProperty("player1Games").GetInt32(),
-                                                Player2Games = setElement.GetProperty("player2Games").GetInt32(),
-                                                IsCompleted = setElement.GetProperty("isCompleted").GetBoolean()
-                                            };
+                                        {
+                                            Id = setElement.GetProperty("id").GetInt32(),
+                                            SetNumber = setElement.GetProperty("setNumber").GetInt32(),
+                                            Player1Games = setElement.GetProperty("player1Games").GetInt32(),
+                                            Player2Games = setElement.GetProperty("player2Games").GetInt32(),
+                                            IsCompleted = setElement.GetProperty("isCompleted").GetBoolean()
+                                        };
 
                                         if (setElement.TryGetProperty("winnerId", out var winnerIdElement) &&
-                                            winnerIdElement.ValueKind != JsonValueKind.Null)
+                                        winnerIdElement.ValueKind != JsonValueKind.Null)
                                         {
                                             setViewModel.WinnerId = winnerIdElement.GetInt32();
                                         }
@@ -406,11 +337,15 @@
                         else
                         {
                             // If there's no $values property, try parsing as a direct array
-                            allMatches = System.Text.Json.JsonSerializer.Deserialize<List<MatchViewModel>>(content, options) ?? new List<MatchViewModel>();
+                            allMatches = System.Text.Json.JsonSerializer.Deserialize<List<MatchViewModel>>(content, options) ?? new
+                            List<MatchViewModel>();
                         }
                     }
 
                     Console.WriteLine($"Successfully parsed {allMatches.Count} matches");
+
+                    // Initialize filtered matches
+                    FilterMatches();
                 }
                 catch (Exception ex)
                 {
@@ -421,10 +356,10 @@
                     try
                     {
                         var settings = new Newtonsoft.Json.JsonSerializerSettings
-                            {
-                                ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
-                                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                            };
+                        {
+                            ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
+                            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                        };
 
                         // Try to deserialize directly to a list instead of using the ReferenceList wrapper
                         // This might work if the JSON is actually an array of matches at the root level
@@ -434,49 +369,25 @@
                         {
                             // If it has a $values property, extract that
                             allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(
-                                Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject["$values"]), settings);
+                            Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject["$values"]), settings);
                         }
                         else
                         {
                             // Otherwise, try deserializing the whole thing as a list
-                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(content, settings) ?? new List<MatchViewModel>();
+                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(content, settings) ?? new
+                            List<MatchViewModel>();
                         }
+
+                        // Initialize filtered matches
+                        FilterMatches();
                     }
                     catch (Exception fallbackEx)
                     {
                         Console.WriteLine($"Fallback parsing also failed: {fallbackEx.Message}");
                         allMatches = new List<MatchViewModel>();
+                        filteredMatches = new List<MatchViewModel>();
                     }
                 }
-
-                // Get current time for comparison
-                var currentTime = DateTime.Now;
-
-                // Apply the updated match classification logic
-                // Upcoming: Matches with no sets AND match time is more than 10 minutes in the future
-                upcomingMatches = allMatches
-                .Where(m => (m.Sets == null || !m.Sets.Any()) &&
-                m.MatchTime > currentTime.AddMinutes(10))
-                .OrderBy(m => m.MatchTime)
-                .ToList();
-
-                // Ongoing:
-                // 1. Matches with sets but none finished yet OR
-                // 2. Matches with no sets but match time is within 10 minutes from now or has already passed
-                ongoingMatches = allMatches
-                .Where(m => (m.Sets != null && m.Sets.Any() && !IsMatchCompleted(m)) ||
-                ((m.Sets == null || !m.Sets.Any()) &&
-                m.MatchTime <= currentTime.AddMinutes(10)))
-                .OrderBy(m => m.MatchTime)
-                .ToList();
-
-                // Finished: Matches where all sets are completed and at least 2 sets have the same winnerId
-                finishedMatches = allMatches
-                .Where(m => IsMatchCompleted(m))
-                .OrderByDescending(m => m.MatchTime) // Most recent first
-                .ToList();
-
-                Console.WriteLine($"Categorized matches: {upcomingMatches.Count} upcoming, {ongoingMatches.Count} ongoing, {finishedMatches.Count} finished");
             }
             else
             {
@@ -488,6 +399,29 @@
         {
             Console.WriteLine($"Exception while loading matches: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private string GetMatchStatus(MatchViewModel m)
+    {
+        var currentTime = DateTime.Now;
+        if ((m.Sets == null || !m.Sets.Any()) && m.MatchTime > currentTime.AddMinutes(10))
+        {
+            return "upcoming";
+        }
+        else if ((m.Sets != null && m.Sets.Any() && !IsMatchCompleted(m)) ||
+        ((m.Sets == null || !m.Sets.Any()) &&
+        m.MatchTime <= currentTime.AddMinutes(10)))
+        {
+            return "ongoing";
+        }
+        else if (IsMatchCompleted(m))
+        {
+            return "completed";
+        }
+        else
+        {
+            return "unknown";
         }
     }
 
@@ -565,32 +499,6 @@
 
         [Newtonsoft.Json.JsonProperty("winnerId")]
         public int? WinnerId { get; set; }
-    }
-
-    private void NavigateCarousel(List<MatchViewModel> matches, int targetPage, ref int currentPage, ref int translateX)
-    {
-        int totalPages = (int)Math.Ceiling(matches.Count / (double)CardsPerPage);
-
-        if (targetPage < 1)
-            targetPage = totalPages; // Wrap to last page
-        else if (targetPage > totalPages)
-            targetPage = 1; // Wrap to first page
-
-        // Calculate the new translateX value
-        int newTranslateX = -(targetPage - 1) * CardsPerPage * TotalCardWidth;
-
-        // Add animation class
-        currentPage = targetPage;
-        translateX = newTranslateX;
-
-        StateHasChanged();
-    }
-
-    private void NavigateToPage(List<MatchViewModel> matches, int pageNumber, ref int currentPage, ref int translateX)
-    {
-        currentPage = pageNumber;
-        translateX = -(pageNumber - 1) * CardsPerPage * TotalCardWidth;
-        StateHasChanged();
     }
 
     private bool IsMatchCompleted(MatchViewModel match)
