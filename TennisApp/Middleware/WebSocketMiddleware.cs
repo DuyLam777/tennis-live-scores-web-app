@@ -26,7 +26,10 @@ public class WebSocketMiddleware
         }
         else
         {
-            _logger.LogInformation("Not a WebSocket request or incorrect path");
+            _logger.LogInformation(
+                "Not a WebSocket request or incorrect path: {Path}",
+                context.Request.Path
+            );
             await _next(context);
         }
     }
@@ -93,12 +96,19 @@ public class WebSocketMiddleware
             }
 
             // Handle set deletion
-            if (parts[2] == "00")
+            if (
+                parts[2] == "00"
+                && parts[4] == "00"
+                && parts[5] == "00"
+                && parts[6] == "00"
+                && parts[7] == "00"
+                && parts[8] == "00"
+                && parts[9] == "00"
+            )
             {
                 dbContext.Set.RemoveRange(match.Sets);
                 await dbContext.SaveChangesAsync();
                 _logger.LogInformation("Deleted all sets for match {MatchId}", matchId);
-                return;
             }
 
             // Set management
@@ -198,7 +208,7 @@ public class WebSocketMiddleware
             if (!currentSet.IsCompleted)
             {
                 if (
-                    currentSet.Player1Games >= 3
+                    currentSet.Player1Games >= 6
                     && currentSet.Player1Games - currentSet.Player2Games >= 2
                 )
                 {
@@ -207,7 +217,7 @@ public class WebSocketMiddleware
                     currentSet.EndTime = DateTime.UtcNow;
                 }
                 else if (
-                    currentSet.Player2Games >= 3
+                    currentSet.Player2Games >= 6
                     && currentSet.Player2Games - currentSet.Player1Games >= 2
                 )
                 {
