@@ -1,40 +1,101 @@
 @page "/Clubs/edit"
 @inject TennisApp.Data.TennisAppContext DB
-@using TennisApp.Models
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@using TennisApp.Models
 @using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Club</PageTitle>
 
-<h1>Edit</h1>
-
-<h4>Club</h4>
-<hr />
-@if (Club is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Club" OnValidSubmit="UpdateClub" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <input type="hidden" name="Club.Id" value="@Club.Id" />
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name:</label>
-                    <InputText id="name" @bind-Value="Club.Name" class="form-control" />
-                    <ValidationMessage For="() => Club.Name" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
-        </div>
+<div class="page-container">
+    <div class="header">
+        <h1>Edit Club</h1>
     </div>
-}
 
-<div>
-    <a href="/clubs">Back to List</a>
+    @if (Club is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="edit-container">
+            <div class="edit-form-section">
+                <EditForm method="post" Model="Club" OnValidSubmit="UpdateClub" FormName="edit" Enhance>
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <input type="hidden" name="Club.Id" value="@Club.Id" />
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name:</label>
+                        <InputText id="name" @bind-Value="Club.Name" class="form-control" />
+                        <ValidationMessage For="() => Club.Name" class="text-danger" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a href="/clubs" class="btn btn-secondary">Back to List</a>
+                </EditForm>
+            </div>
+
+            <div class="players-section">
+                <h4>Club Players</h4>
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" @bind="playerSearchQuery" @bind:event="oninput" 
+                               @onkeyup="SearchPlayers" placeholder="Search for players..." />
+                    </div>
+                </div>
+
+                <div class="players-container">
+                    <div class="current-players">
+                        <h5>Current Club Players (@Club.Players.Count)</h5>
+                        @if (!Club.Players.Any())
+                        {
+                            <div class="no-players">No players assigned to this club.</div>
+                        }
+                        else
+                        {
+                            <div class="player-list">
+                                @foreach (var player in Club.Players.OrderBy(p => p.Name))
+                                {
+                                    <div class="player-item">
+                                        <span class="player-name">@player.Name</span>
+                                        <button class="btn btn-danger btn-sm" @onclick="() => RemovePlayer(player)">
+                                            Remove
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="available-players">
+                        <h5>Available Players (@availablePlayers.Count)</h5>
+                        @if (isSearching)
+                        {
+                            <p><em>Searching...</em></p>
+                        }
+                        else if (!availablePlayers.Any())
+                        {
+                            <div class="no-players">No available players found.</div>
+                        }
+                        else
+                        {
+                            <div class="player-list">
+                                @foreach (var player in availablePlayers)
+                                {
+                                    <div class="player-item">
+                                        <span class="player-name">@player.Name</span>
+                                        <button class="btn btn-success btn-sm" @onclick="() => AddPlayer(player)">
+                                            Add
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -44,22 +105,101 @@ else
     [SupplyParameterFromForm]
     public Club? Club { get; set; }
 
+    private List<Player> availablePlayers = new List<Player>();
+    private string playerSearchQuery = "";
+    private bool isSearching = false;
+
     protected override async Task OnInitializedAsync()
     {
-        Club ??= await DB.Club.FirstOrDefaultAsync(m => m.Id == Id);
+        Club ??= await DB.Club
+                     .Include(c => c.Players)
+                     .FirstOrDefaultAsync(m => m.Id == Id);
 
         if (Club is null)
         {
             NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Initial load of available players (not already in the club)
+        await LoadAvailablePlayers();
+    }
+
+    private async Task LoadAvailablePlayers()
+    {
+        if (Club == null) return;
+
+        // Get players that are not in this club
+        availablePlayers = await DB.Player
+            .Where(p => !Club.Players.Select(cp => cp.Id).Contains(p.Id))
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+    }
+
+    private async Task SearchPlayers()
+    {
+        if (Club == null) return;
+        
+        isSearching = true;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(playerSearchQuery))
+            {
+                // Reset to show all available players
+                await LoadAvailablePlayers();
+            }
+            else
+            {
+                // Search for players by name that are not in this club
+                string query = playerSearchQuery.ToLower();
+                availablePlayers = await DB.Player
+                    .Where(p => !Club.Players.Select(cp => cp.Id).Contains(p.Id) && 
+                                p.Name.ToLower().Contains(query))
+                    .OrderBy(p => p.Name)
+                    .ToListAsync();
+            }
+        }
+        finally
+        {
+            isSearching = false;
         }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see https://aka.ms/RazorPagesCRUD.
+    private async Task AddPlayer(Player player)
+    {
+        if (Club == null) return;
+
+        // Add player to the club
+        Club.Players.Add(player);
+        
+        // Save changes to database
+        await DB.SaveChangesAsync();
+        
+        // Update available players list
+        availablePlayers.Remove(player);
+    }
+
+    private async Task RemovePlayer(Player player)
+    {
+        if (Club == null) return;
+
+        // Remove player from the club
+        Club.Players.Remove(player);
+        
+        // Save changes to database
+        await DB.SaveChangesAsync();
+        
+        // Update available players list
+        availablePlayers.Add(player);
+        
+        // Sort the available players list by name
+        availablePlayers = availablePlayers.OrderBy(p => p.Name).ToList();
+    }
+
     public async Task UpdateClub()
     {
         DB.Attach(Club!).State = EntityState.Modified;
-
+        
         try
         {
             await DB.SaveChangesAsync();
@@ -75,7 +215,7 @@ else
                 throw;
             }
         }
-
+        
         NavigationManager.NavigateTo("/clubs");
     }
 
