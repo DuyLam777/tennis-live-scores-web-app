@@ -19,9 +19,6 @@
     <div class="actions-container">
         <div class="search-bar">
             <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Search by player name..." />
-            <button class="search-button" @onclick="HandleSearch">
-                <span>Search</span>
-            </button>
         </div>
         <a href="/matches/create" class="btn btn-primary">Create New Match</a>
     </div>
@@ -94,7 +91,7 @@
             }
         </div>
         
-        @if (!filteredMatches.Any())
+        @if (!filteredMatches.Any() || filteredMatches == null)
         {
             <div class="no-results">
                 <p>No matches found. Try a different search term.</p>

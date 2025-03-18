@@ -1,0 +1,205 @@
+.page-container {
+    background-color: var(--background);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 1.5rem;
+}
+
+.players-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.actions-container {
+    margin-bottom: 2rem;
+}
+
+.search-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.search-bar input {
+    background-color: var(--surface);
+    border-color: var(--overlay);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid var(--overlay);
+    width: 100%;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.25);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.form-select {
+    background-color: var(--surface);
+    border-color: var(--overlay);
+    color: var(--text);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--overlay);
+    flex: 1;
+    min-width: 150px;
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+    color: var(--background);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--secondary) 85%, white);
+    transform: translateY(-2px);
+}
+
+.player-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.player-card {
+    background-color: var(--surface);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.player-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.player-card-header {
+    padding: 1.25rem;
+    background-color: var(--overlay);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.player-card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.country-badge {
+    background-color: var(--tertiary);
+    color: var(--background);
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.player-card-body {
+    padding: 1.25rem;
+    flex-grow: 1;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.info-label {
+    color: var(--text);
+    opacity: 0.7;
+}
+
+.info-value {
+    font-weight: 500;
+}
+
+.player-card-footer {
+    padding: 1.25rem;
+    background-color: var(--overlay);
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.action-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.edit-btn {
+    background-color: var(--primary);
+    color: var(--background);
+}
+
+.details-btn {
+    background-color: var(--tertiary);
+    color: var(--background);
+}
+
+.delete-btn {
+    background-color: var(--danger);
+    color: var(--background);
+}
+
+.action-button:hover {
+    filter: brightness(110%);
+    transform: translateY(-2px);
+}
+
+.no-results {
+    background-color: var(--surface);
+    padding: 2rem;
+    text-align: center;
+    border-radius: 0.75rem;
+    margin-top: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .players-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+    }
+    
+    .player-cards-container {
+        grid-template-columns: 1fr;
+    }
+}

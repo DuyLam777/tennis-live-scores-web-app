@@ -1,22 +1,119 @@
 @page "/clubs"
-@using Microsoft.AspNetCore.Components.QuickGrid
-@inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Linq
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@implements IDisposable
+@rendermode InteractiveServer
+<PageTitle>Tennis Clubs</PageTitle>
 
-<PageTitle>Index</PageTitle>
+<link rel="stylesheet" href="css/clubs-page.css">
 
-<h1>Index</h1>
+<div class="page-container">
+    <div class="clubs-header">
+        <h1>Tennis Clubs</h1>
+        <a href="clubs/create" class="btn btn-primary">Add New Club</a>
+    </div>
 
-<p>
-    <a href="clubs/create">Create New</a>
-</p>
+    <div class="actions-container">
+        <div class="search-bar">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Search by club name..." />
+        </div>
+    </div>
 
-<QuickGrid Class="table" Items="DB.Club">
-    <PropertyColumn Property="club => club.Name" />
+    @if (isLoading)
+    {
+        <p><em>Loading clubs...</em></p>
+    }
+    else
+    {
+        <div class="club-cards-container">
+            @foreach (var club in filteredClubs)
+            {
+                <div class="club-card">
+                    <div class="club-card-header">
+                        <h3>@club.Name</h3>
+                    </div>
+                    <div class="club-card-body">
+                    <div class="info-item">
+                        <span class="info-label">Players:</span>
+                        <span class="info-value">@club.Players.Count</span>
+                    </div>
+                    
+                    @if (club.Players.Any())
+                    {
+                        <div class="players-preview">
+                            <span class="info-label">Top players:</span>
+                            <div class="player-list">
+                                @foreach (var player in club.Players.Take(3))
+                                {
+                                    <span class="player-badge">@player.Name</span>
+                                }
+                                @if (club.Players.Count > 3)
+                                {
+                                    <span class="player-count">+@(club.Players.Count - 3) more</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                    <div class="club-card-footer">
+                        <a href="@($"clubs/edit?id={club.Id}")" class="action-button edit-btn">Edit</a>
+                        <a href="@($"clubs/details?id={club.Id}")" class="action-button details-btn">Details</a>
+                        <a href="@($"clubs/delete?id={club.Id}")" class="action-button delete-btn">Delete</a>
+                    </div>
+                </div>
+            }
+        </div>
 
-    <TemplateColumn Context="club">
-        <a href="@($"clubs/edit?id={club.Id}")">Edit</a> |
-        <a href="@($"clubs/details?id={club.Id}")">Details</a> |
-        <a href="@($"clubs/delete?id={club.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        @if (!filteredClubs.Any())
+        {
+            <div class="no-results">
+                <p>No clubs found. Try a different search term.</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private TennisApp.Data.TennisAppContext dbContext = null!;
+    private IQueryable<Club> clubsQuery = null!;
+    private List<Club> filteredClubs = new List<Club>();
+    private bool isLoading = true;
+    private string searchQuery = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+        
+        // Create the query - include related Players
+        clubsQuery = dbContext.Club.Include(c => c.Players).AsQueryable();
+        
+        // Load all clubs initially
+        filteredClubs = await clubsQuery.ToListAsync();
+        
+        isLoading = false;
+    }
+
+    private async Task HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredClubs = await clubsQuery.ToListAsync();
+        }
+        else
+        {
+            string query = searchQuery.ToLower();
+            filteredClubs = await clubsQuery
+                .Where(c => c.Name != null && c.Name.ToLower().Contains(query))
+                .ToListAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        // Make sure to dispose the context when the component is disposed
+        dbContext?.Dispose();
+    }
+}

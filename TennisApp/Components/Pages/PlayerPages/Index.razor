@@ -1,90 +1,164 @@
 @page "/players"
-@using Microsoft.AspNetCore.Components.QuickGrid
-@inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
-
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
+@implements IDisposable
+@rendermode InteractiveServer
 <PageTitle>Players</PageTitle>
 
+<link rel="stylesheet" href="css/players-page.css">
+
 <div class="page-container">
-    <h1>Players</h1>
-
-    <p>
-        <a href="players/create" class="btn btn-primary">Create New</a>
-    </p>
-
-    <div class="table-container">
-        <QuickGrid Class="quick-grid" Items="DB.Player">
-            <PropertyColumn Property="player => player.Name" Title="Name" Sortable="true" />
-            <PropertyColumn Property="player => player.Country" Title="Country" Sortable="true" />
-            <PropertyColumn Property="player => player.DateOfBirth" Title="Date of Birth" Sortable="true" Format="yyyy-MM-dd" />
-            <PropertyColumn Property="player => player.gender" Title="Gender" Sortable="true" />
-
-            <TemplateColumn Title="Actions">
-                <a href="@($"players/edit?id={context.Id}")" class="btn btn-primary btn-sm action-button">Edit</a>
-                <a href="@($"players/details?id={context.Id}")" class="btn btn-info btn-sm action-button">Details</a>
-                <a href="@($"players/delete?id={context.Id}")" class="btn btn-danger btn-sm action-button">Delete</a>
-            </TemplateColumn>
-        </QuickGrid>
+    <div class="players-header">
+        <h1>Players</h1>
+        <a href="players/create" class="btn btn-primary">Add New Player</a>
     </div>
+
+    <div class="actions-container">
+        <div class="search-bar">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch"
+                placeholder="Search by player name..." />
+            <div class="filter-controls">
+                <select class="form-select" value="@genderFilter"
+                    @onchange="async (e) => { genderFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
+                    <option value="">All Genders</option>
+                    @foreach (var gender in Enum.GetValues(typeof(Gender)))
+                    {
+                        <option value="@gender">@gender</option>
+                    }
+                </select>
+                <select class="form-select" value="@countryFilter"
+                    @onchange="async (e) => { countryFilter = e.Value?.ToString() ?? string.Empty; await HandleSearch(); }">
+                    <option value="">All Countries</option>
+                    @foreach (var country in countries)
+                    {
+                        <option value="@country">@country</option>
+                    }
+                </select>
+                <button class="btn btn-secondary" @onclick="ResetFilters">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <p><em>Loading players...</em></p>
+    }
+    else
+    {
+        <div class="player-cards-container">
+            @foreach (var player in filteredPlayers)
+            {
+                <div class="player-card">
+                    <div class="player-card-header">
+                        <h3>@player.Name</h3>
+                        <span class="country-badge">@player.Country</span>
+                    </div>
+                    <div class="player-card-body">
+                        <div class="player-info">
+                            <div class="info-item">
+                                <span class="info-label">Date of Birth:</span>
+                                <span class="info-value">@player.DateOfBirth.ToString("yyyy-MM-dd")</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Gender:</span>
+                                <span class="info-value">@player.gender</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="player-card-footer">
+                        <a href="@($"players/edit?id={player.Id}")" class="action-button edit-btn">Edit</a>
+                        <a href="@($"players/details?id={player.Id}")" class="action-button details-btn">Details</a>
+                        <a href="@($"players/delete?id={player.Id}")" class="action-button delete-btn">Delete</a>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (!filteredPlayers.Any())
+        {
+            <div class="no-results">
+                <p>No players found. Try a different search term.</p>
+            </div>
+        }
+    }
 </div>
 
-<style>
-    .page-container {
-        background-color: #181825 !important;
-        color: #cdd6f4 !important;
-        min-height: 100vh !important;
-        padding: 1.5rem !important;
+@code {
+    private TennisApp.Data.TennisAppContext dbContext = null!;
+    private IQueryable<Player> playersQuery = null!;
+    private List<Player> filteredPlayers = new List<Player>();
+    private List<string> countries = new List<string>();
+    private bool isLoading = true;
+    private string searchQuery = "";
+    private string genderFilter = "";
+    private string countryFilter = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+
+        // Create the query
+        playersQuery = dbContext.Player.AsQueryable();
+
+        // Load all players initially
+        filteredPlayers = await playersQuery.ToListAsync();
+
+        // Extract unique countries for the filter dropdown
+        countries = await dbContext.Player
+        .Select(p => p.Country)
+        .Where(c => !string.IsNullOrEmpty(c))
+        .Distinct()
+        .OrderBy(c => c)
+        .ToListAsync();
+
+        isLoading = false;
     }
 
-    .table-container {
-        background-color: #1e1e2e !important;
-        border-radius: 0.75rem !important;
-        padding: 1.5rem !important;
-        overflow: auto !important;
+    private async Task HandleSearch()
+    {
+        IQueryable<Player> query = playersQuery;
+
+        // Apply name search filter
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            string searchLower = searchQuery.ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(searchLower));
+        }
+
+        // Apply gender filter
+        if (!string.IsNullOrWhiteSpace(genderFilter))
+        {
+            if (Enum.TryParse<Gender>(genderFilter, out var gender))
+            {
+                query = query.Where(p => p.gender == gender);
+            }
+        }
+
+        // Apply country filter
+        if (!string.IsNullOrWhiteSpace(countryFilter))
+        {
+            query = query.Where(p => p.Country == countryFilter);
+        }
+
+        // Execute the query
+        filteredPlayers = await query.ToListAsync();
     }
 
-    ::deep .quick-grid {
-        color: #cdd6f4 !important;
-        background-color: #1e1e2e !important;
+    private async Task ResetFilters()
+    {
+        searchQuery = "";
+        genderFilter = "";
+        countryFilter = "";
+
+        // Reset to show all players
+        filteredPlayers = await playersQuery.ToListAsync();
     }
 
-    ::deep .quick-grid th {
-        background-color: #313244 !important;
-        color: #cdd6f4 !important;
-        border-bottom: 1px solid #45475a !important;
+    public void Dispose()
+    {
+        // Make sure to dispose the context when the component is disposed
+        dbContext?.Dispose();
     }
-
-    ::deep .quick-grid td {
-        color: #cdd6f4 !important;
-        border-bottom: 1px solid #313244 !important;
-    }
-
-    .btn-primary {
-        background-color: #89b4fa !important;
-        border-color: #89b4fa !important;
-        color: #181825 !important;
-    }
-
-    .btn-info {
-        background-color: #74c7ec !important;
-        border-color: #74c7ec !important;
-        color: #181825 !important;
-    }
-
-    .btn-danger {
-        background-color: #f38ba8 !important;
-        border-color: #f38ba8 !important;
-        color: #181825 !important;
-    }
-
-    .btn-sm {
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.875rem !important;
-    }
-
-    .action-button {
-        margin-right: 0.5rem !important;
-        border-radius: 0.5rem !important;
-        padding: 0.5rem 1rem !important;
-    }
-</style>
+}
