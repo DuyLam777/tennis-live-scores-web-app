@@ -41,7 +41,7 @@ else
                     <InputDate id="dateofbirth" @bind-Value="Player.DateOfBirth" class="form-control" />
                     <ValidationMessage For="() => Player.DateOfBirth" class="text-danger" />
                 </div>
-                
+
                 <!-- Gender -->
                 <div class="mb-3">
                     <label for="gender" class="form-label">Gender:</label>
@@ -53,13 +53,12 @@ else
                     <ValidationMessage For="() => Player.gender" class="text-danger" />
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
+                <a href="/players" class="btn btn-outline-secondary">Back to List</a>
+
             </EditForm>
         </div>
     </div>
 }
-<div>
-    <a href="/players">Back to List</a>
-</div>
 
 @code {
     [SupplyParameterFromQuery]

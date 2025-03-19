@@ -31,7 +31,7 @@
         </dl>
         <EditForm method="post" Model="court" OnValidSubmit="DeleteCourt" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(court is null)">Delete</button> |
-            <a href="/courts">Back to List</a>
+            <a href="/courts" class="btn btn-outline-secondary">Back to List</a>
         </EditForm>
     }
 </div>

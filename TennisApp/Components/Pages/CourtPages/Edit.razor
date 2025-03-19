@@ -4,72 +4,158 @@
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Court</PageTitle>
 
-<h1>Edit</h1>
+<link rel="stylesheet" href="css/court-pages.css">
 
-<h4>Court</h4>
-<hr />
-@if (Court is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Court" OnValidSubmit="UpdateCourt" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <input type="hidden" name="Court.Id" value="@Court.Id" />
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name:</label>
-                    <InputText id="name" @bind-Value="Court.Name" class="form-control" />
-                    <ValidationMessage For="() => Court.Name" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="isoccupied" class="form-label">IsOccupied:</label>
-                    <InputCheckbox id="isoccupied" @bind-Value="Court.IsOccupied" class="form-check-input" />
-                    <ValidationMessage For="() => Court.IsOccupied" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="isindoor" class="form-label">IsIndoor:</label>
-                    <InputCheckbox id="isindoor" @bind-Value="Court.IsIndoor" class="form-check-input" />
-                    <ValidationMessage For="() => Court.IsIndoor" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
-        </div>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold">Edit Court</h1>
+        <a href="/courts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Courts
+        </a>
     </div>
-}
 
-<div>
-    <a href="/courts">Back to List</a>
+    @if (Court is null)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Edit Court Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm method="post" Model="Court" OnValidSubmit="UpdateCourt" FormName="edit" Enhance>
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            
+                            <input type="hidden" name="Court.Id" value="@Court.Id" />
+                            
+                            <div class="mb-4">
+                                <label for="name" class="form-label">Court Name</label>
+                                <div class="input-group">
+                                    <InputText id="name" @bind-Value="Court.Name" class="form-control" placeholder="Enter court name" />
+                                </div>
+                                <ValidationMessage For="() => Court.Name" class="text-danger small mt-1" />
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="form-check form-switch">
+                                                <InputCheckbox id="isoccupied" @bind-Value="Court.IsOccupied" class="form-check-input" />
+                                                <label for="isoccupied" class="form-check-label ms-2">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="@(Court.IsOccupied ? "bi bi-lock-fill text-danger" : "bi bi-unlock-fill text-success") me-2"></i>
+                                                        Court is @(Court.IsOccupied ? "Occupied" : "Available")
+                                                    </span>
+                                                </label>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">
+                                                Toggle to indicate if this court is currently being used for matches
+                                            </small>
+                                            <ValidationMessage For="() => Court.IsOccupied" class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="form-check form-switch">
+                                                <InputCheckbox id="isindoor" @bind-Value="Court.IsIndoor" class="form-check-input" />
+                                                <label for="isindoor" class="form-check-label ms-2">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="@(Court.IsIndoor ? "bi bi-house-door-fill text-info" : "bi bi-sun-fill text-warning") me-2"></i>
+                                                        @(Court.IsIndoor ? "Indoor Court" : "Outdoor Court")
+                                                    </span>
+                                                </label>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">
+                                                Specify whether this court is indoors or outdoors
+                                            </small>
+                                            <ValidationMessage For="() => Court.IsIndoor" class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i> Save Changes
+                                </button>
+                                <a href="@($"/courts/details?id={Court.Id}")" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel
+                                </a>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Court Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="@(Court.IsOccupied ? "bg-danger" : "bg-success") rounded-circle me-3" style="width: 24px; height: 24px;"></div>
+                            <div>
+                                <h6 class="mb-0">@(Court.IsOccupied ? "Occupied" : "Available")</h6>
+                                <small class="text-muted">@(Court.IsOccupied ? "This court is currently in use" : "This court is ready for matches")</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center">
+                            <div class="@(Court.IsIndoor ? "bg-info" : "bg-secondary") rounded-circle me-3" style="width: 24px; height: 24px;"></div>
+                            <div>
+                                <h6 class="mb-0">@(Court.IsIndoor ? "Indoor" : "Outdoor")</h6>
+                                <small class="text-muted">@(Court.IsIndoor ? "Protected from weather conditions" : "Open air court")</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 p-3 border rounded">
+                            <h6>Current Name:</h6>
+                            <p class="mb-0 fw-bold">@Court.Name</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     [SupplyParameterFromQuery]
     public int Id { get; set; }
-
+    
     [SupplyParameterFromForm]
     public Court? Court { get; set; }
-
+    
     protected override async Task OnInitializedAsync()
     {
         Court ??= await DB.Court.FirstOrDefaultAsync(m => m.Id == Id);
-
         if (Court is null)
         {
             NavigationManager.NavigateTo("notfound");
         }
     }
-
+    
     // To protect from overposting attacks, enable the specific properties you want to bind to.
     // For more details, see https://aka.ms/RazorPagesCRUD.
     public async Task UpdateCourt()
     {
         DB.Attach(Court!).State = EntityState.Modified;
-
         try
         {
             await DB.SaveChangesAsync();
@@ -85,10 +171,9 @@ else
                 throw;
             }
         }
-
         NavigationManager.NavigateTo("/courts");
     }
-
+    
     bool CourtExists(int id)
     {
         return DB.Court.Any(e => e.Id == id);
