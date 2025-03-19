@@ -3,43 +3,267 @@
 @using TennisApp.Models
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Club Details</PageTitle>
 
-<h1>Details</h1>
+@if (club is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@club.Name</h1>
+            <div>
+                <a href="@($"/clubs/edit?id={club.Id}")" class="btn btn-primary me-2">Edit</a>
+                <a href="/clubs" class="btn btn-outline-secondary">Back to List</a>
+            </div>
+        </div>
 
-<div>
-    <h4>Club</h4>
-    <hr />
-    @if (club is null)
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Club Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-md-3">Name</dt>
+                            <dd class="col-md-9">@club.Name</dd>
+
+                            <dt class="col-md-3">ID</dt>
+                            <dd class="col-md-9">@club.Id</dd>
+
+                            <dt class="col-md-3">Players</dt>
+                            <dd class="col-md-9">@(club.Players?.Count ?? 0) registered players</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (club.Players != null && club.Players.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Club Players</h5>
+                            <a href="@($"/players/create?clubId={club.Id}")" class="btn btn-sm btn-success">
+                                <i class="bi bi-plus"></i> Add Player
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Country</th>
+                                            <th>Gender</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var player in club.Players)
+                                        {
+                                            <tr>
+                                                <td>@player.Name</td>
+                                                <td>@player.Country</td>
+                                                <td>@player.gender</td>
+                                                <td>
+                                                    <a href="@($"/players/details/{player.Id}")"
+                                                        class="btn btn-sm btn-info me-1">
+                                                        Details
+                                                    </a>
+                                                    <a href="@($"/players/edit?id={player.Id}")" class="btn btn-sm btn-primary">
+                                                        Edit
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Club Players</h5>
+                            <a href="@($"/clubs/edit?id={club.Id}")" class="btn btn-sm btn-success">
+                                <i class="bi bi-plus"></i> Add Player
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                No players have been registered with this club yet.
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Club Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="text-center me-4">
+                                <div class="display-4">@(club.Players?.Count ?? 0)</div>
+                                <div>Players</div>
+                            </div>
+                            <div class="border-end mx-3"></div>
+                            <div class="text-center">
+                                <div class="display-4">@(tournaments?.Count ?? 0)</div>
+                                <div>Tournaments</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="@($"/clubs/edit?id={club.Id}")" class="btn btn-success">
+                                <i class="bi bi-person-plus"></i> Add Player
+                            </a>
+                            <a href="@($"/tournaments/create?hostClubId={club.Id}")" class="btn btn-primary">
+                                <i class="bi bi-trophy"></i> Create Tournament
+                            </a>
+                            <a href="@($"/clubs/edit?id={club.Id}")" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Edit Club
+                            </a>
+                            <button class="btn btn-danger" @onclick="() => showDeleteModal = true">
+                                <i class="bi bi-trash"></i> Delete Club
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (showDeleteModal)
     {
-        <p><em>Loading...</em></p>
-    }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">Name</dt>
-            <dd class="col-sm-10">@club.Name</dd>
-        </dl>
-        <div>
-            <a href="@($"/clubs/edit?id={club.Id}")">Edit</a> |
-            <a href="@($"/clubs")">Back to List</a>
+        <div class="modal-backdrop show"></div>
+        <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the club "@club.Name"?</p>
+                        @if (club.Players != null && club.Players.Any())
+                        {
+                            <div class="alert alert-warning">
+                                This club has @club.Players.Count associated players that will also be affected.
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                    </div>
+                </div>
+            </div>
         </div>
     }
-</div>
+}
 
 @code {
-    Club? club;
+    private Club? club;
+    private List<Tournament>? tournaments;
+    private bool showDeleteModal = false;
+    private string? errorMessage;
 
     [SupplyParameterFromQuery]
     public int Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        club = await DB.Club.FirstOrDefaultAsync(m => m.Id == Id);
+        // Load club with related players
+        club = await DB.Club
+        .Include(c => c.Players)
+        .FirstOrDefaultAsync(m => m.Id == Id);
 
         if (club is null)
         {
             NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Load tournaments hosted by this club
+        tournaments = await DB.Tournament
+        .Where(t => t.HostId == Id)
+        .ToListAsync();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (club != null)
+        {
+            try
+            {
+                // First check if this club hosts any tournaments
+                var hostedTournaments = await DB.Tournament
+                .Where(t => t.HostId == club.Id)
+                .ToListAsync();
+
+                if (hostedTournaments.Any())
+                {
+                    // Handle related tournaments
+                    foreach (var tournament in hostedTournaments)
+                    {
+                        // Check if tournaments have matches
+                        var tournamentMatches = await DB.Match
+                        .Where(m => m.TournamentId == tournament.Id)
+                        .ToListAsync();
+
+                        // First remove tournament associations from matches
+                        foreach (var match in tournamentMatches)
+                        {
+                            match.TournamentId = null;
+                        }
+
+                        // Save changes to update matches
+                        await DB.SaveChangesAsync();
+
+                        // Now it's safe to remove the tournament
+                        DB.Tournament.Remove(tournament);
+                    }
+
+                    // Save changes again to remove tournaments
+                    await DB.SaveChangesAsync();
+                }
+
+                // Now it's safe to remove the club
+                DB.Club.Remove(club);
+                await DB.SaveChangesAsync();
+                NavigationManager.NavigateTo("/clubs");
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error deleting club: {ex.Message}";
+                showDeleteModal = false;
+            }
         }
     }
 }
