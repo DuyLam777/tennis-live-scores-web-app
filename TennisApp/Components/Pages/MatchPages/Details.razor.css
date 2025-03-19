@@ -1,0 +1,52 @@
+.bg-primary {
+    color: var(--background) !important;
+}
+
+/*make border rounded*/
+.border {
+    border-radius: 0.5em;
+    border-color: var(--primary) !important;
+}
+
+/* Custom checkbox styling */
+.form-check-input {
+    background-color: var(--background);
+    border-color: var(--primary);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Larger, more visible checkbox for form switch */
+.form-switch .form-check-input {
+    height: 1.5em;
+    width: 3em;
+}
+
+/* Style the track (background) of the switch */
+.form-switch .form-check-input {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23cdd6f4'/%3e%3c/svg%3e");
+}
+
+/* Style the thumb (circle) when checked */
+.form-switch .form-check-input:checked {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23181825'/%3e%3c/svg%3e");
+}
+
+/* Status badges styling */
+.badge.bg-success {
+    background-color: var(--success) !important;
+    color: var(--background) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--secondary) !important;
+    color: var(--background) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--overlay) !important;
+    color: var(--text) !important;
+}

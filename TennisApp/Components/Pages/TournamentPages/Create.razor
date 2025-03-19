@@ -1,7 +1,9 @@
 @page "/tournaments/create"
+@page "/tournaments/create/{HostId:int}"
 @rendermode InteractiveServer
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @using System.Net.Http.Json
 @using System.Text.Json
@@ -62,13 +64,26 @@
 
                     <div class="mb-3">
                         <label for="hostId" class="form-label">Host Club</label>
-                        <InputSelect id="hostId" @bind-Value="tournament.HostId" class="form-select">
-                            <option value="">-- Select a Host Club --</option>
-                            @foreach (var club in clubs)
-                            {
-                                <option value="@club.Id">@club.Name</option>
-                            }
-                        </InputSelect>
+                        @if (preselectedHost)
+                        {
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" value="@selectedHostName" readonly />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="ClearHostSelection">
+                                    Change
+                                </button>
+                            </div>
+                            <InputNumber id="hostId" @bind-Value="tournament.HostId" class="d-none" />
+                        }
+                        else
+                        {
+                            <InputSelect id="hostId" @bind-Value="tournament.HostId" class="form-select">
+                                <option value="">-- Select a Host Club --</option>
+                                @foreach (var club in clubs)
+                                {
+                                    <option value="@club.Id">@club.Name</option>
+                                }
+                            </InputSelect>
+                        }
                         <ValidationMessage For="@(() => tournament.HostId)" />
                     </div>
 
@@ -121,7 +136,14 @@
 
             <div class="form-group mt-4 d-flex gap-2">
                 <button type="submit" class="btn btn-primary">Create Tournament</button>
-                <a href="/tournaments" class="btn btn-outline-secondary">Cancel</a>
+                @if (preselectedHost)
+                {
+                    <a href="@($"/clubs/details?id={tournament.HostId}")" class="btn btn-outline-secondary">Cancel</a>
+                }
+                else
+                {
+                    <a href="/tournaments" class="btn btn-outline-secondary">Cancel</a>
+                }
             </div>
         </EditForm>
     </div>
@@ -141,12 +163,25 @@
                     <li><strong>Type:</strong> Format of the tournament (Singles/Doubles/Mixed)</li>
                 </ul>
                 <p>After creating the tournament, you'll be able to add matches to it.</p>
+                
+                @if (preselectedHost && !string.IsNullOrEmpty(selectedHostName))
+                {
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i> This tournament will be hosted by <strong>@selectedHostName</strong>.
+                    </div>
+                }
             </div>
         </div>
     </div>
 </div>
 
 @code {
+    [Parameter]
+    public int? HostId { get; set; }
+    
+    [SupplyParameterFromQuery]
+    public int? HostClubId { get; set; }
+
     private Tournament tournament = new()
     {
         StartDate = DateTime.Today,
@@ -158,6 +193,8 @@
     private List<Club> clubs = new();
     private string? errorMessage;
     private bool isLoading = true;
+    private bool preselectedHost = false;
+    private string selectedHostName = string.Empty;
     private TennisAppContext dbContext = null!;
 
     // Custom JSON options to match the server's serialization
@@ -167,6 +204,85 @@
     };
 
     protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine($"OnInitializedAsync - HostId: {HostId}, HostClubId: {HostClubId}");
+        isLoading = true;
+        
+        try
+        {
+            // Get the current URL and check for a hostClubId parameter manually
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            Console.WriteLine($"Current URL: {uri}");
+            
+            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var hostClubIdFromQuery = queryParams["hostClubId"];
+            Console.WriteLine($"hostClubId from query string: {hostClubIdFromQuery}");
+            
+            int effectiveHostId = 0;
+            
+            // Try to use the parameter from the URL first
+            if (!string.IsNullOrEmpty(hostClubIdFromQuery) && int.TryParse(hostClubIdFromQuery, out int parsedId))
+            {
+                effectiveHostId = parsedId;
+                Console.WriteLine($"Using hostClubId from query: {effectiveHostId}");
+            }
+            // Fall back to route parameter if available
+            else if (HostId.HasValue && HostId.Value > 0)
+            {
+                effectiveHostId = HostId.Value;
+                Console.WriteLine($"Using HostId from route: {effectiveHostId}");
+            }
+            
+            // Load clubs
+            await LoadClubs();
+            
+            // Handle the host ID if one was found
+            if (effectiveHostId > 0)
+            {
+                Console.WriteLine($"Setting tournament.HostId to {effectiveHostId}");
+                // Set the tournament's host ID
+                tournament.HostId = effectiveHostId;
+                
+                // Find the club name
+                var hostClub = clubs.FirstOrDefault(c => c.Id == effectiveHostId);
+                if (hostClub != null)
+                {
+                    selectedHostName = hostClub.Name ?? string.Empty;
+                    preselectedHost = true;
+                    Console.WriteLine($"Found club name: {selectedHostName}");
+                }
+                else
+                {
+                    // Try to get the club from the database
+                    dbContext = await DbContextFactory.CreateDbContextAsync();
+                    var club = await dbContext.Club.FindAsync(effectiveHostId);
+                    if (club != null)
+                    {
+                        selectedHostName = club.Name ?? string.Empty;
+                        preselectedHost = true;
+                        Console.WriteLine($"Found club name from DB: {selectedHostName}");
+                    }
+                    else
+                    {
+                        preselectedHost = false;
+                        errorMessage = $"Could not find club with ID {effectiveHostId}";
+                        Console.WriteLine($"Club not found: {effectiveHostId}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"Error in OnInitializedAsync: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadClubs()
     {
         try
         {
@@ -194,7 +310,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception in OnInitializedAsync: {ex}");
+            Console.WriteLine($"Exception in LoadClubs: {ex}");
             errorMessage = $"Error loading clubs: {ex.Message}";
 
             try
@@ -208,10 +324,13 @@
                 errorMessage = $"Failed to load clubs from API and database: {fallbackEx.Message}";
             }
         }
-        finally
-        {
-            isLoading = false;
-        }
+    }
+
+    private void ClearHostSelection()
+    {
+        preselectedHost = false;
+        // We keep the HostId value so it shows in the dropdown
+        Console.WriteLine($"Cleared preselected host. HostId value is still {tournament.HostId}");
     }
 
     private async Task HandleValidSubmit()
@@ -234,8 +353,16 @@
 
             if (response.IsSuccessStatusCode)
             {
-                // Redirect back to the tournaments list
-                NavigationManager.NavigateTo("/tournaments");
+                // If we came from a specific club, go back to its details
+                if (preselectedHost && tournament.HostId > 0)
+                {
+                    NavigationManager.NavigateTo($"/clubs/details?id={tournament.HostId}");
+                }
+                else
+                {
+                    // Otherwise go back to the tournaments list
+                    NavigationManager.NavigateTo("/tournaments");
+                }
             }
             else
             {

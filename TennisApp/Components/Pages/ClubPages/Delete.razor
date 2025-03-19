@@ -24,7 +24,7 @@
         </dl>
         <EditForm method="post" Model="club" OnValidSubmit="DeleteClub" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(club is null)">Delete</button> |
-            <a href="/clubs">Back to List</a>
+            <a href="/clubs" class="btn btn-outline-secondary">Back to List</a>
         </EditForm>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
