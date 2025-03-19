@@ -1,51 +1,421 @@
-@page "/players/details"
+@page "/players/details/{Id:int}"
 @inject TennisApp.Data.TennisAppContext DB
 @using TennisApp.Models
+@using TennisApp.Utils
 @inject NavigationManager NavigationManager
 @using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Player Details</PageTitle>
 
-<h1>Details</h1>
+@if (player is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@player.Name</h1>
+            <div>
+                <a href="@($"/players/edit?id={player.Id}")" class="btn btn-primary me-2">Edit</a>
+                <a href="/players" class="btn btn-outline-secondary">Back to List</a>
+            </div>
+        </div>
 
-<div>
-    <h4>Player</h4>
-    <hr />
-    @if (player is null)
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Player Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Name</dt>
+                                    <dd>@player.Name</dd>
+
+                                    <dt>Country</dt>
+                                    <dd>
+                                        @if (!string.IsNullOrEmpty(player.Country))
+                                        {
+                                            <span>@player.Country</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not specified</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl>
+                                    <dt>Date of Birth</dt>
+                                    <dd>@player.DateOfBirth.ToShortDateString()</dd>
+
+                                    <dt>Gender</dt>
+                                    <dd>@player.gender</dd>
+
+                                    <dt>Age</dt>
+                                    <dd>@GetAge(player.DateOfBirth) years</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (matches != null && matches.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Match History</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Opponent</th>
+                                            <th>Court</th>
+                                            <th>Tournament</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var match in matches)
+                                        {
+                                            var opponent = match.Player1Id == player.Id ? match.Player2 : match.Player1;
+                                            <tr>
+                                                <td>@match.MatchTime.ToLocalTime().ToString("g")</td>
+                                                <td>
+                                                    @if (opponent != null)
+                                                    {
+                                                        <button class="btn btn-link p-0"
+                                                            @onclick="() => NavigateToPlayer(opponent.Id)">@opponent.Name</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Unknown</span>
+                                                    }
+                                                </td>
+                                                <td>@(match.Court?.Name ?? "N/A")</td>
+                                                <td>
+                                                    @if (match.Tournament != null)
+                                                    {
+                                                        <button class="btn btn-link p-0"
+                                                            @onclick="() => NavigateToTournament(match.Tournament.Id)">@match.Tournament.Name</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">None</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info" @onclick="() => NavigateToMatch(match.Id)">
+                                                        View Match
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Match History</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                No match history found for this player.
+                            </div>
+                            <a href="/matches/create" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Create New Match
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Player Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="text-center me-4">
+                                <div class="display-4">@matchesWon</div>
+                                <div>Wins</div>
+                            </div>
+                            <div class="border-end mx-3"></div>
+                            <div class="text-center">
+                                <div class="display-4">@matchesPlayed</div>
+                                <div>Matches</div>
+                            </div>
+                        </div>
+
+                        @if (matchesPlayed > 0)
+                        {
+                            <div class="mt-3">
+                                <h6>Win Rate</h6>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                        style="width: @(Math.Round((double)matchesWon / matchesPlayed * 100))%"
+                                        aria-valuenow="@matchesWon" aria-valuemin="0" aria-valuemax="@matchesPlayed">
+                                        @(Math.Round((double)matchesWon / matchesPlayed * 100))%
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (club != null)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Club Membership</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>
+                                <strong>Club:</strong>
+                                <button class="btn btn-link p-0" @onclick="() => NavigateToClub(club.Id)">@club.Name</button>
+                            </p>
+                            <p>
+                                <strong>Other club members:</strong> @(club.Players?.Count - 1 ?? 0)
+                            </p>
+                        </div>
+                    </div>
+                }
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="@($"/matches/create?player1Id={player.Id}")" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Create Match
+                            </a>
+                            <a href="@($"/players/edit?id={player.Id}")" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Edit Player
+                            </a>
+                            <button class="btn btn-danger" @onclick="() => showDeleteModal = true">
+                                <i class="bi bi-trash"></i> Delete Player
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (showDeleteModal)
     {
-        <p><em>Loading...</em></p>
-    }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">Name</dt>
-            <dd class="col-sm-10">@player.Name</dd>
-            <dt class="col-sm-2">Country</dt>
-            <dd class="col-sm-10">@player.Country</dd>
-            <dt class="col-sm-2">DateOfBirth</dt>
-            <dd class="col-sm-10">@player.DateOfBirth</dd>
-            <dt class="col-sm-2">gender</dt>
-            <dd class="col-sm-10">@player.gender</dd>
-        </dl>
-        <div>
-            <a href="@($"/players/edit?id={player.Id}")">Edit</a> |
-            <a href="@($"/players")">Back to List</a>
+        <div class="modal-backdrop show"></div>
+        <div class="modal show d-block" tabindex="-1" aria-modal="true" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the player "@player.Name"?</p>
+                        @if (matches != null && matches.Any())
+                        {
+                            <div class="alert alert-warning">
+                                This player has @matches.Count associated matches. These will be affected by deletion.
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                    </div>
+                </div>
+            </div>
         </div>
     }
-</div>
+}
 
 @code {
-    Player? player;
+    private Player? player;
+    private Club? club;
+    private List<Match>? matches;
+    private int matchesPlayed = 0;
+    private int matchesWon = 0;
+    private bool showDeleteModal = false;
+    private string? errorMessage;
 
     [SupplyParameterFromQuery]
+    [Parameter]
     public int Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        player = await DB.Player.FirstOrDefaultAsync(m => m.Id == Id);
+        // Load player with related data
+        player = await DB.Player
+        .FirstOrDefaultAsync(m => m.Id == Id);
 
         if (player is null)
         {
             NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Load club if the player is associated with one
+        if (player != null)
+        {
+            club = await DB.Club
+            .Include(c => c.Players)
+            .FirstOrDefaultAsync(c => c.Players.Any(p => p.Id == player.Id));
+        }
+
+        // Load matches involving this player
+        matches = await DB.Match
+        .Include(m => m.Player1)
+        .Include(m => m.Player2)
+        .Include(m => m.Court)
+        .Include(m => m.Tournament)
+        .Where(m => m.Player1Id == Id || m.Player2Id == Id)
+        .OrderByDescending(m => m.MatchTime) // Most recent matches first
+        .ToListAsync();
+
+        // Calculate statistics
+        if (matches != null)
+        {
+            matchesPlayed = matches.Count;
+
+            // Count wins (counting completed sets where this player is the winner)
+            var completedSets = await DB.Set
+            .Where(s => s.IsCompleted && s.WinnerId.HasValue)
+            .Where(s => s.Match.Player1Id == Id || s.Match.Player2Id == Id)
+            .ToListAsync();
+
+            // Count matches where player won more sets than opponent
+            var playerWins = new HashSet<int>();
+
+            foreach (var match in await DB.Match
+            .Include(m => m.Sets.Where(s => s.IsCompleted && s.WinnerId.HasValue))
+            .Where(m => m.Player1Id == Id || m.Player2Id == Id)
+            .ToListAsync())
+            {
+                // Count sets won by player and opponent
+                int setsWonByPlayer = 0;
+                int setsWonByOpponent = 0;
+
+                foreach (var set in match.Sets)
+                {
+                    if (set.WinnerId == 1 && match.Player1Id == Id) setsWonByPlayer++;
+                    else if (set.WinnerId == 2 && match.Player2Id == Id) setsWonByPlayer++;
+                    else setsWonByOpponent++;
+                }
+
+                // Player wins the match if they won more sets
+                if (setsWonByPlayer > setsWonByOpponent) playerWins.Add(match.Id);
+            }
+
+            matchesWon = playerWins.Count;
+        }
+    }
+
+    private int GetAge(DateOnly birthDate)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - birthDate.Year;
+
+        // Adjust age if birthday hasn't occurred yet this year
+        if (birthDate > today.AddYears(-age)) age--;
+
+        return age;
+    }
+
+    private void NavigateToPlayer(int playerId)
+    {
+        NavigationManager.NavigateTo($"/players/details/{playerId}");
+    }
+
+    private void NavigateToMatch(int matchId)
+    {
+        NavigationManager.NavigateTo($"/matches/details/{matchId}");
+    }
+
+    private void NavigateToTournament(int tournamentId)
+    {
+        NavigationManager.NavigateTo($"/tournaments/details/{tournamentId}");
+    }
+
+    private void NavigateToClub(int clubId)
+    {
+        NavigationManager.NavigateTo($"/clubs/details?id={clubId}");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (player != null)
+        {
+            try
+            {
+                // We need to delete in the correct order to handle foreign key constraints
+                // Game -> Set -> Match -> Player
+
+                var playerMatches = await DB.Match
+                .Include(m => m.Sets)
+                .ThenInclude(s => s.Games)
+                .Where(m => m.Player1Id == player.Id || m.Player2Id == player.Id)
+                .ToListAsync();
+
+                foreach (var match in playerMatches)
+                {
+                    foreach (var set in match.Sets)
+                    {
+                        foreach (var game in set.Games)
+                        {
+                            DB.Game.Remove(game);
+                        }
+                    }
+
+                    await DB.SaveChangesAsync();
+
+                    foreach (var set in match.Sets.ToList())
+                    {
+                        DB.Set.Remove(set);
+                    }
+
+                    await DB.SaveChangesAsync();
+
+                    DB.Match.Remove(match);
+                }
+
+                await DB.SaveChangesAsync();
+
+                DB.Player.Remove(player);
+                await DB.SaveChangesAsync();
+
+                NavigationManager.NavigateTo("/players");
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error deleting player: {ex.Message}";
+            }
         }
     }
 }
