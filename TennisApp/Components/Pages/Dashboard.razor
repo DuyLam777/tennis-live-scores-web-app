@@ -1,12 +1,15 @@
 @page "/"
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Mvc.RazorPages
 @using TennisApp.Models
-@using System.Text.Json
-@using Newtonsoft.Json
-@using Newtonsoft.Json
-@inject HttpClient Http
+@using TennisApp.Data
+@using Microsoft.EntityFrameworkCore
+@using TennisApp.WebSockets
+@inject IDbContextFactory<TennisApp.Data.TennisAppContext> DbContextFactory
 @inject IJSRuntime JSRuntime
+@inject WebSocketHandler WebSocketHandler
+@implements IDisposable
 
 <div class="page-container">
     <div class="header">
@@ -56,7 +59,7 @@
                                         matchStatus == "completed" ? "Finished" : IsMatchLive(match) ? "Live" : "Starting soon")
                                     </div>
                                     <div class="match-sets">
-                                        Set @match.Sets.Count of @GetMaxSets(match)
+                                        Set @(match.Sets?.Count ?? 0) of @GetMaxSets(match)
                                     </div>
                                 </div>
 
@@ -71,9 +74,16 @@
                                             }
                                         </div>
                                         <div class="player-score player-score-left">
-                                            @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
+                                            @if (match.Sets == null || !match.Sets.Any())
                                             {
-                                                <span class="set-score">@set.Player1Games</span>
+                                                <span class="set-score">0</span>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
+                                                {
+                                                    <span class="set-score">@set.Player1Games</span>
+                                                }
                                             }
                                         </div>
                                     </div>
@@ -84,9 +94,16 @@
                                     <!-- Right player with score on left, name on right -->
                                     <div class="player player-right">
                                         <div class="player-score player-score-right">
-                                            @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
+                                            @if (match.Sets == null || !match.Sets.Any())
                                             {
-                                                <span class="set-score">@set.Player2Games</span>
+                                                <span class="set-score">0</span>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var set in match.Sets.OrderBy(s => s.SetNumber))
+                                                {
+                                                    <span class="set-score">@set.Player2Games</span>
+                                                }
                                             }
                                         </div>
                                         <div class="player-info">
@@ -107,24 +124,41 @@
 </div>
 
 @code {
-    private List<MatchViewModel> allMatches = new List<MatchViewModel>();
-    private List<MatchViewModel> filteredMatches = new List<MatchViewModel>();
+    private TennisAppContext dbContext = null!;
+    private List<Match> allMatches = new List<Match>();
+    private List<Match> filteredMatches = new List<Match>();
     private string searchTerm = "";
     private string sortOption = "timeAsc";
     
-    // Added for scrolling functionality
+    // References for scrolling functionality
     private ElementReference matchListContainer;
-    private MatchViewModel? liveMatchRef;
+    private double lastScrollPosition = 0;
+    private Match? liveMatchRef;
+    
+    // For WebSocket connectivity
+    private bool isRegisteredForWebSocketUpdates = false;
+    private DotNetObjectReference<Dashboard>? objRef;
+    private string? clientSocketId;
     
     // Check if a match is the one we want to highlight
-    private bool isLiveMatchRef(MatchViewModel match)
+    private bool isLiveMatchRef(Match match)
     {
         return match == liveMatchRef;
     }
 
     protected override async Task OnInitializedAsync()
     {
+        // Create a dedicated context that will live for the component's lifetime
+        dbContext = await DbContextFactory.CreateDbContextAsync();
+        
         await LoadMatches();
+        
+        // Register for WebSocket updates
+        WebSocketHandler.RegisterForWebSocketUpdates(this);
+        isRegisteredForWebSocketUpdates = true;
+        
+        // Set up the .NET object reference for JavaScript interop
+        objRef = DotNetObjectReference.Create(this);
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -133,6 +167,9 @@
         {
             // First render completed, now wait for matches to load
             await InvokeAsync(StateHasChanged);
+            
+            // Initialize the WebSocket connection via JavaScript
+            await InitializeWebSocketConnection();
         }
         else if (filteredMatches.Count > 0 && liveMatchRef == null)
         {
@@ -165,10 +202,156 @@
             }
         }
     }
-
-    protected override void OnParametersSet()
+    
+    private async Task InitializeWebSocketConnection()
     {
-        FilterMatches();
+        try
+        {
+            // Create scroll position management functions
+            string scrollScript = @"
+                // Function to save scroll position
+                window.saveScrollPosition = (container) => {
+                    if (container) {
+                        return container.scrollTop;
+                    }
+                    return 0;
+                };
+                
+                // Function to restore scroll position
+                window.restoreScrollPosition = (container, position) => {
+                    if (container) {
+                        container.scrollTop = position;
+                    }
+                };
+            ";
+            
+            // Create a WebSocket connection script
+            string wsScript = @"
+                window.connectWebSocket = (dotNetObj) => {
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+                    
+                    console.log('Connecting to WebSocket at:', wsUrl);
+                    
+                    const socket = new WebSocket(wsUrl);
+                    
+                    socket.onopen = () => {
+                        console.log('WebSocket connection established');
+                        
+                        // Subscribe to live_score topic
+                        const subscribeMsg = JSON.stringify({
+                            action: 'subscribe',
+                            topic: 'live_score'
+                        });
+                        socket.send(subscribeMsg);
+                        console.log('Subscribed to live_score topic');
+                        
+                        // Request initial data
+                        const getDataMsg = JSON.stringify({
+                            action: 'get',
+                            topic: 'live_score'
+                        });
+                        socket.send(getDataMsg);
+                        console.log('Requested initial live_score data');
+                    };
+                    
+                    socket.onmessage = (event) => {
+                        console.log('WebSocket message received:', event.data);
+                        dotNetObj.invokeMethodAsync('HandleWebSocketMessage', event.data);
+                    };
+                    
+                    socket.onclose = (event) => {
+                        console.log('WebSocket connection closed:', event.code, event.reason);
+                        // Try to reconnect after a delay
+                        setTimeout(() => window.connectWebSocket(dotNetObj), 5000);
+                    };
+                    
+                    socket.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                    };
+                    
+                    // Store the socket in a global variable so we can access it later
+                    window.tennisAppWebSocket = socket;
+                    
+                    return true;
+                };
+            ";
+            
+            // Combine and inject both scripts
+            await JSRuntime.InvokeVoidAsync("eval", scrollScript + wsScript);
+            
+            // Connect to the WebSocket
+            bool connected = await JSRuntime.InvokeAsync<bool>("connectWebSocket", objRef);
+            Console.WriteLine($"WebSocket connection initialized: {connected}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing WebSocket connection: {ex.Message}");
+        }
+    }
+    
+    [JSInvokable]
+    public async Task HandleWebSocketMessage(string messageJson)
+    {
+        try
+        {
+            // Save scroll position before updating
+            lastScrollPosition = await JSRuntime.InvokeAsync<double>("saveScrollPosition", 
+                matchListContainer);
+                
+            Console.WriteLine($"Received WebSocket message: {messageJson}");
+            
+            // If it's a live_score update, refresh our match data
+            if (messageJson.Contains("\"Type\":\"live_score\"") || messageJson.Contains("\"type\":\"live_score\""))
+            {
+                Console.WriteLine("Live score update detected, refreshing data...");
+                
+                // Make sure we're using a fresh DbContext
+                dbContext.Dispose();
+                dbContext = await DbContextFactory.CreateDbContextAsync();
+                
+                // Force database to clear its cache
+                dbContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+                
+                // Reload the matches but keep the current live match reference
+                bool hasLiveMatch = liveMatchRef != null;
+                await LoadMatches(keepLiveMatchRef: hasLiveMatch);
+                
+                Console.WriteLine("Refreshed matches after live_score update");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error handling WebSocket message: {ex.Message}");
+        }
+    }
+    
+    // Blazor method that WebSocketHandler will call when there's an update
+    public async Task RefreshFromWebSocketEvent()
+    {
+        try
+        {
+            // Save scroll position before updating
+            lastScrollPosition = await JSRuntime.InvokeAsync<double>("saveScrollPosition", 
+                matchListContainer);
+                
+            // Keep live match reference when refreshing
+            bool hasLiveMatch = liveMatchRef != null;
+            await LoadMatches(keepLiveMatchRef: hasLiveMatch);
+            
+            await InvokeAsync(StateHasChanged);
+            
+            // Restore scroll position after update
+            await JSRuntime.InvokeVoidAsync("restoreScrollPosition", 
+                matchListContainer, lastScrollPosition);
+                
+            Console.WriteLine("Refreshed matches from WebSocketHandler notification");
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing from WebSocket event: {ex.Message}");
+        }
     }
 
     private void OnSearchInput(ChangeEventArgs e)
@@ -177,19 +360,12 @@
         FilterMatches();
     }
 
-    private void OnSortChanged(ChangeEventArgs e)
+    private void FilterMatches(bool keepLiveMatchRef = false)
     {
-        sortOption = e.Value?.ToString() ?? "timeAsc";
-        FilterMatches();
-    }
-
-    private void SortChanged(ChangeEventArgs e)
-    {
-        FilterMatches();
-    }
-
-    private void FilterMatches()
-    {
+        // Store current liveMatchRef if we need to keep it
+        Match? currentLiveMatch = keepLiveMatchRef ? liveMatchRef : null;
+        int? currentLiveMatchId = currentLiveMatch?.Id;
+        
         // Apply search filter
         var filtered = allMatches;
 
@@ -216,8 +392,16 @@
 
         filteredMatches = filtered;
         
-        // Reset the live match reference when filters change
-        liveMatchRef = null;
+        // Conditionally restore liveMatchRef
+        if (keepLiveMatchRef && currentLiveMatchId != null)
+        {
+            // Find the match in the new filtered list that matches the ID
+            liveMatchRef = filteredMatches.FirstOrDefault(m => m.Id == currentLiveMatchId);
+        }
+        else
+        {
+            liveMatchRef = null;
+        }
     }
 
     private void ClearSearch()
@@ -226,184 +410,45 @@
         FilterMatches();
     }
 
-    private async Task LoadMatches()
+    private async Task LoadMatches(bool keepLiveMatchRef = false)
     {
         try
         {
-            var response = await Http.GetAsync("api/matches");
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
+            // Create a new DbContext to ensure we're getting fresh data
+            using var freshContext = await DbContextFactory.CreateDbContextAsync();
+            
+            // Query the database with explicit loading of all related entities
+            allMatches = await freshContext.Match
+                .AsNoTracking() // Use AsNoTracking for better performance in read-only scenarios
+                .Include(m => m.Court)
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Include(m => m.Sets)
+                    .ThenInclude(s => s.Games) // Make sure we load the games within sets
+                .ToListAsync();
 
-                try
-                {
-                    // Use System.Text.Json instead of Newtonsoft.Json
-                    var options = new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    };
+            Console.WriteLine($"Successfully loaded {allMatches.Count} matches from database with {allMatches.Sum(m => m.Sets?.Count ?? 0)} sets and {allMatches.Sum(m => m.Sets?.Sum(s => s.Games?.Count ?? 0) ?? 0)} games");
 
-                    using (var jsonDoc = JsonDocument.Parse(content))
-                    {
-                        var root = jsonDoc.RootElement;
-
-                        if (root.TryGetProperty("$values", out var valuesElement))
-                        {
-                            allMatches = new List<MatchViewModel>();
-
-                            foreach (var matchElement in valuesElement.EnumerateArray())
-                            {
-                                var match = new MatchViewModel
-                                {
-                                    Id = matchElement.GetProperty("id").GetInt32(),
-                                    MatchTime = matchElement.GetProperty("matchTime").GetDateTime(),
-                                    Sets = new List<SetViewModel>()
-                                };
-
-                                // Parse court
-                                if (matchElement.TryGetProperty("court", out var courtElement) &&
-                                courtElement.ValueKind != JsonValueKind.Null)
-                                {
-                                    match.Court = new CourtViewModel
-                                    {
-                                        Id = courtElement.GetProperty("id").GetInt32(),
-                                        Name = courtElement.GetProperty("name").GetString(),
-                                        IsIndoor = courtElement.GetProperty("isIndoor").GetBoolean()
-                                    };
-                                }
-
-                                // Parse player1
-                                if (matchElement.TryGetProperty("player1", out var player1Element) &&
-                                player1Element.ValueKind != JsonValueKind.Null)
-                                {
-                                    match.Player1 = new PlayerViewModel
-                                    {
-                                        Id = player1Element.GetProperty("id").GetInt32(),
-                                        Name = player1Element.GetProperty("name").GetString()
-                                    };
-
-                                    if (player1Element.TryGetProperty("country", out var countryElement) &&
-                                    countryElement.ValueKind != JsonValueKind.Null)
-                                    {
-                                        match.Player1.Country = countryElement.GetString();
-                                    }
-                                }
-
-                                // Parse player2
-                                if (matchElement.TryGetProperty("player2", out var player2Element) &&
-                                player2Element.ValueKind != JsonValueKind.Null)
-                                {
-                                    match.Player2 = new PlayerViewModel
-                                    {
-                                        Id = player2Element.GetProperty("id").GetInt32(),
-                                        Name = player2Element.GetProperty("name").GetString()
-                                    };
-
-                                    if (player2Element.TryGetProperty("country", out var countryElement) &&
-                                    countryElement.ValueKind != JsonValueKind.Null)
-                                    {
-                                        match.Player2.Country = countryElement.GetString();
-                                    }
-                                }
-
-                                // Parse sets
-                                if (matchElement.TryGetProperty("sets", out var setsElement) &&
-                                setsElement.ValueKind != JsonValueKind.Null &&
-                                setsElement.TryGetProperty("$values", out var setsValuesElement))
-                                {
-                                    foreach (var setElement in setsValuesElement.EnumerateArray())
-                                    {
-                                        var setViewModel = new SetViewModel
-                                        {
-                                            Id = setElement.GetProperty("id").GetInt32(),
-                                            SetNumber = setElement.GetProperty("setNumber").GetInt32(),
-                                            Player1Games = setElement.GetProperty("player1Games").GetInt32(),
-                                            Player2Games = setElement.GetProperty("player2Games").GetInt32(),
-                                            IsCompleted = setElement.GetProperty("isCompleted").GetBoolean()
-                                        };
-
-                                        if (setElement.TryGetProperty("winnerId", out var winnerIdElement) &&
-                                        winnerIdElement.ValueKind != JsonValueKind.Null)
-                                        {
-                                            setViewModel.WinnerId = winnerIdElement.GetInt32();
-                                        }
-
-                                        match.Sets.Add(setViewModel);
-                                    }
-                                }
-
-                                allMatches.Add(match);
-                            }
-                        }
-                        else
-                        {
-                            // If there's no $values property, try parsing as a direct array
-                            allMatches = System.Text.Json.JsonSerializer.Deserialize<List<MatchViewModel>>(content, options) ?? new
-                            List<MatchViewModel>();
-                        }
-                    }
-
-                    Console.WriteLine($"Successfully parsed {allMatches.Count} matches");
-
-                    // Initialize filtered matches
-                    FilterMatches();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"JSON parsing error: {ex.Message}");
-                    Console.WriteLine($"JSON content: {content.Substring(0, Math.Min(500, content.Length))}...");
-
-                    // As a last resort, try deserializing with Newtonsoft directly to List<MatchViewModel>
-                    try
-                    {
-                        var settings = new Newtonsoft.Json.JsonSerializerSettings
-                        {
-                            ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
-                            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                        };
-
-                        // Try to deserialize directly to a list instead of using the ReferenceList wrapper
-                        // This might work if the JSON is actually an array of matches at the root level
-                        var jsonObject = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(content, settings);
-
-                        if (jsonObject?.GetProperty("$values") != null)
-                        {
-                            // If it has a $values property, extract that
-                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(
-                            Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject["$values"]), settings);
-                        }
-                        else
-                        {
-                            // Otherwise, try deserializing the whole thing as a list
-                            allMatches = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MatchViewModel>>(content, settings) ?? new
-                            List<MatchViewModel>();
-                        }
-
-                        // Initialize filtered matches
-                        FilterMatches();
-                    }
-                    catch (Exception fallbackEx)
-                    {
-                        Console.WriteLine($"Fallback parsing also failed: {fallbackEx.Message}");
-                        allMatches = new List<MatchViewModel>();
-                        filteredMatches = new List<MatchViewModel>();
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Error loading matches: {response.StatusCode}");
-                Console.WriteLine($"Response content: {await response.Content.ReadAsStringAsync()}");
-            }
+            // Initialize filtered matches
+            FilterMatches(keepLiveMatchRef);
+            
+            // Force refresh UI
+            await InvokeAsync(StateHasChanged);
+            
+            // Restore scroll position after UI update
+            await JSRuntime.InvokeVoidAsync("restoreScrollPosition", 
+                matchListContainer, lastScrollPosition);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception while loading matches: {ex.Message}");
+            Console.WriteLine($"Exception while loading matches from database: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            allMatches = new List<Match>();
+            filteredMatches = new List<Match>();
         }
     }
 
-    private string GetMatchStatus(MatchViewModel m)
+    private string GetMatchStatus(Match m)
     {
         var currentTime = DateTime.Now;
         if ((m.Sets == null || !m.Sets.Any()) && m.MatchTime > currentTime.AddMinutes(10))
@@ -426,83 +471,7 @@
         }
     }
 
-    // Also update the ReferenceList class to match the JSON structure better
-    public class ReferenceList<T>
-    {
-        [Newtonsoft.Json.JsonProperty("$id")]
-        public string? Id { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("$values")]
-        public List<T> Values { get; set; } = new List<T>();
-    }
-
-    public class MatchViewModel
-    {
-        [Newtonsoft.Json.JsonProperty("id")]
-        public int Id { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("matchTime")]
-        public DateTime MatchTime { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("court")]
-        public CourtViewModel? Court { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("player1")]
-        public PlayerViewModel? Player1 { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("player2")]
-        public PlayerViewModel? Player2 { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("sets")]
-        public List<SetViewModel> Sets { get; set; } = new List<SetViewModel>();
-    }
-
-    public class CourtViewModel
-    {
-        [Newtonsoft.Json.JsonProperty("id")]
-        public int Id { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("name")]
-        public string? Name { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("isIndoor")]
-        public bool IsIndoor { get; set; }
-    }
-
-    public class PlayerViewModel
-    {
-        [Newtonsoft.Json.JsonProperty("id")]
-        public int Id { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("name")]
-        public string? Name { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("country")]
-        public string? Country { get; set; }
-    }
-
-    public class SetViewModel
-    {
-        [Newtonsoft.Json.JsonProperty("id")]
-        public int Id { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("setNumber")]
-        public int SetNumber { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("player1Games")]
-        public int Player1Games { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("player2Games")]
-        public int Player2Games { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("isCompleted")]
-        public bool IsCompleted { get; set; }
-
-        [Newtonsoft.Json.JsonProperty("winnerId")]
-        public int? WinnerId { get; set; }
-    }
-
-    private bool IsMatchCompleted(MatchViewModel match)
+    private bool IsMatchCompleted(Match match)
     {
         // Updated match completion logic:
         // 1. All sets must be completed
@@ -526,7 +495,7 @@
         return player1Wins >= 2 || player2Wins >= 2;
     }
 
-    private bool IsPlayerWinner(MatchViewModel match, int? playerId)
+    private bool IsPlayerWinner(Match match, int? playerId)
     {
         if (match.Sets == null || !match.Sets.Any() || playerId == null)
             return false;
@@ -537,12 +506,32 @@
         return playerSets > opponentSets;
     }
 
-    private bool IsMatchLive(MatchViewModel match)
+    private bool IsMatchLive(Match match)
+{
+    // Case 1: If there are no sets, it's not live
+    if (match.Sets == null || !match.Sets.Any())
+        return false;
+        
+    // Case 2: If all sets are completed and at least 2 sets have the same winner, it's not live
+    if (match.Sets.All(s => s.IsCompleted))
     {
-        return match.Sets != null && match.Sets.Any(s => !s.IsCompleted);
+        // Count wins for each player
+        int? player1Id = match.Player1?.Id;
+        int? player2Id = match.Player2?.Id;
+        
+        int player1Wins = match.Sets.Count(s => s.WinnerId == player1Id);
+        int player2Wins = match.Sets.Count(s => s.WinnerId == player2Id);
+        
+        // If either player has won at least 2 sets, the match is completed (not live)
+        if (player1Wins >= 2 || player2Wins >= 2)
+            return false;
     }
+    
+    // Otherwise, check if there's at least one incomplete set
+    return match.Sets.Any(s => !s.IsCompleted);
+}
 
-    private int GetMaxSets(MatchViewModel match)
+    private int GetMaxSets(Match match)
     {
         return 3;
     }
@@ -565,7 +554,7 @@
         }
     }
 
-    private string GetMatchResult(MatchViewModel match)
+    private string GetMatchResult(Match match)
     {
         if (match.Sets == null || !match.Sets.Any())
             return "No result";
@@ -574,5 +563,35 @@
         int player2Sets = match.Sets.Count(s => s.IsCompleted && s.WinnerId == match.Player2?.Id);
 
         return $"{player1Sets}-{player2Sets}";
+    }
+    
+    public void Dispose()
+    {
+        try
+        {
+            // Unregister from WebSocket updates
+            if (isRegisteredForWebSocketUpdates)
+            {
+                WebSocketHandler.UnregisterFromWebSocketUpdates(this);
+            }
+            
+            // Clean up JavaScript interop
+            objRef?.Dispose();
+            
+            // Close WebSocket if open
+            JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.tennisAppWebSocket && window.tennisAppWebSocket.readyState === WebSocket.OPEN) {
+                    window.tennisAppWebSocket.close();
+                    console.log('WebSocket connection closed from component disposal');
+                }
+            ");
+            
+            // Properly dispose the DbContext when the component is disposed
+            dbContext?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during component disposal: {ex.Message}");
+        }
     }
 }

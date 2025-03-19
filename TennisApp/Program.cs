@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using TennisApp.Components;
 using TennisApp.Data;
-using TennisApp.Middleware;
 using TennisApp.WebSockets;
 
 // This is necessary for the physical android device to connect to the server from the MAUI app
@@ -71,6 +70,7 @@ builder.Services.AddResponseCompression(opts =>
 // Register WebSocket services
 builder.Services.AddSingleton<WebSocketHandler>();
 builder.Services.AddSingleton<CourtAvailabilityService>();
+builder.Services.AddSingleton<LiveScoreService>();
 
 var app = builder.Build();
 
@@ -88,7 +88,7 @@ app.UseAntiforgery();
 // Enable WebSockets
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromMinutes(2) });
 
-app.UseMiddleware<WebSocketMiddleware>();
+
 
 // Map WebSocket endpoint
 app.Map(
