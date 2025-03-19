@@ -1,148 +1,277 @@
-# Web App
+# CourtSync - Tennis Live Scores Platform
 
-Required packages/dependencies:
-dotnet-sdk-8.0-bin
-aspnet-runtime-8.0-bin
+CourtSync is a platform for managing and displaying live scores for tennis matches in amateur tournaments. The application is designed to address the common issue of schedule delays in tennis tournaments by providing real-time updates on match progress, helping players and organizers better manage their time.
 
-Research questions:
-decision for blazor instead of mvc
-connection between the devices/applications (differences between blazor and mvc)
-    - architecture for the connection (Likely 'SignalR')
-    - research blazor architecture further (render modes specifically)
-    - Move the connection up the priority list
+## Overview
 
-Add password to a match/tournament so that it can be accessed later
-Good story telling about our artice
+During a tennis tournament, matches often last longer than their scheduled time slot, causing frustration for waiting players. CourtSync aims to solve this problem by providing live score tracking for all ongoing matches, allowing players to better estimate their wait times and tournament organizers to efficiently manage court usage.
 
-Here are the curl commands:
-### Create match
+The platform consists of three main components:
+
+- **Web Application**: Displays live scores and manages tournaments, players, courts, and matches
+- **Mobile Application**: Enables score input and connects to mechanical scoreboards
+- **Hardware Client**: Captures scores from mechanical scoreboards found on tennis courts
+
+## Features
+
+### Dashboard
+
+- Real-time overview of all ongoing matches
+- Match filtering and searching capabilities
+- Visual indicators for match status (upcoming, ongoing, completed)
+
+### Match Management
+
+- Create, edit, and delete tennis matches
+- Track scores in real-time using sets and games
+- Complete match history and statistics
+- Share match links for spectators
+
+### Tournament Management
+
+- Create and manage tennis tournaments
+- Track all matches within a tournament
+- Tournament brackets visualization
+- Tournament status tracking (upcoming, ongoing, completed)
+
+### Player Management
+
+- Player profiles with personal information
+- Match history and statistics for each player
+- Player search and filtering
+
+### Court Management
+
+- Real-time court availability tracking
+- Court occupation status updates
+- Indoor/outdoor court designation
+
+### Club Management
+
+- Club profiles with player rosters
+- Club-hosted tournament management
+- Player assignment to clubs
+
+### Real-time Updates
+
+- WebSocket connections for instant updates
+- Live score broadcasting
+- Court availability notifications
+
+## Technology Stack
+
+### Backend
+
+- **ASP.NET Core 8.0**: Web framework
+- **EF Core 8.0**: ORM for database access
+- **PostgreSQL**: Database
+- **WebSockets**: Real-time communication
+
+### Frontend
+
+- **Blazor**: Server-side components with interactivity
+- **Bootstrap**: UI framework
+- **JavaScript**: Custom client-side functionality
+
+## System Requirements
+
+- **.NET SDK 8.0** or higher
+- **PostgreSQL** database
+- **Docker** (optional, for containerization)
+
+## Installation and Setup
+
+### Prerequisites
+
+- Install [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Install [PostgreSQL](https://www.postgresql.org/download/)
+
+### Database Setup
+
+The application uses PostgreSQL. You can run it locally or using Docker:
+
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{
-    "courtId": 1,
-    "matchTime": "2024-03-20T15:00:00Z",
-    "player1Id": 1,
-    "player2Id": 2,
-    "scoreboardId": 1
-}' http://localhost:5020/api/matches
+# Using Docker
+docker-compose up -d
 ```
 
-### Get Players
+### Application Setup
+
+1. Clone the repository:
+
 ```bash
-    curl -X GET http://localhost:5020/api/players
+git clone <repository-url>
+cd TennisApp
 ```
 
-### Get Courts
+2. Restore dependencies:
+
 ```bash
-    curl -X GET http://localhost:5020/api/courts
+dotnet restore
 ```
 
-commands and packages used:
+3. Update database connection string in `appsettings.json` if necessary:
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Host=localhost;Port=5432;Database=tennisappdb;Username=postgres;Password=password"
+}
+```
+
+4. Run database migrations:
 
 ```bash
-dotnet aspnet-codegenerator blazor CRUD -dbProvider postgres -dc TennisApp.Data.TennisAppContext -m TennisApp -outDir Components/Pages
-dotnet tool install --global dotnet-aspnet-codegenerator
-dotnet tool install --global dotnet-ef
-dotnet tool install --global dotnet-aspnet-codegenerator --version 8.0.0
-dotnet tool install --global dotnet-ef --version 8.0.0
-echo 'export PATH="$PATH:/home/luka/.dotnet/tools"' >> ~/.zshrc
-dotnet aspnet-codegenerator blazor CRUD -dbProvider postgres -dc TennisApp.Data.TennisAppContext -m TennisApp.Models.Match -outDir Components/Pages
-dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design --version 8.0.0
-dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 8.0.0
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 8.0.0
-dotnet add package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore --version 8.0.0
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 8.0.0
-dotnet add package Microsoft.AspNetCore.Components.QuickGrid --version 8.0.0
-dotnet add package Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter --version 8.0.0
-dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
-## Getting started
+5. Run the application:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/kdg-ti/the-lab/teams-24-25/linux-goons-tennis-live-scores/web-app.git
-git branch -M main
-git push -uf origin main
+```bash
+dotnet run
 ```
 
-## Integrate with your tools
+The application will be available at `http://localhost:5020`
 
-- [ ] [Set up project integrations](https://gitlab.com/kdg-ti/the-lab/teams-24-25/linux-goons-tennis-live-scores/web-app/-/settings/integrations)
+## Usage Guide
 
-## Collaborate with your team
+### Creating a Match
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+1. Navigate to the "Matches" page
+2. Click "Create New Match"
+3. Fill in match details:
+   - Select Court
+   - Select Players
+   - Set Match Date/Time
+   - Assign Scoreboard
+   - Optionally assign to a Tournament
+4. Click "Create"
 
-## Test and Deploy
+### Updating Match Scores
 
-Use the built-in continuous integration in GitLab.
+1. Navigate to the "Matches" page
+2. Find the match and click "Details"
+3. Use the score controls to update sets and games
+4. Scores will update in real-time for all viewers
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Creating a Tournament
 
-***
+1. Navigate to the "Tournaments" page
+2. Click "Create New Tournament"
+3. Fill in tournament details:
+   - Name
+   - Start/End Dates
+   - Host Club
+   - Tournament Type
+   - Maximum Participants
+4. Click "Create Tournament"
 
-# Editing this README
+### Managing Courts
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+1. Navigate to the "Courts" page
+2. View court status (available/occupied)
+3. Create new courts or edit existing ones
+4. Toggle court availability as needed
 
-## Suggestions for a good README
+## API Endpoints
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+The application provides several RESTful API endpoints for integration with other systems, including the mobile application:
 
-## Name
-Choose a self-explaining name for your project.
+### Matches
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- `GET /api/matches`: Get all matches
+- `GET /api/matches/{id}`: Get specific match
+- `POST /api/matches`: Create a new match
+- `PUT /api/matches/{id}`: Update match
+- `DELETE /api/matches/{id}`: Delete match
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Tournaments
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- `GET /api/tournament`: Get all tournaments
+- `GET /api/tournament/{id}`: Get specific tournament
+- `POST /api/tournament`: Create a new tournament
+- `PUT /api/tournament/{id}`: Update tournament
+- `DELETE /api/tournament/{id}`: Delete tournament
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+### Courts
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+- `GET /api/courts`: Get all courts
+- `GET /api/courts/{id}`: Get specific court
+- `PUT /api/courts/{id}`: Update court
+- `PATCH /api/courts/{id}/toggleOccupation`: Toggle court occupation status
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Players
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+- `GET /api/players`: Get all players
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Scoreboards
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+- `GET /api/scoreboards`: Get all scoreboards
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## WebSocket Integration
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+The application uses WebSockets for real-time updates. Clients can connect to:
+
+```text
+ws://<host>/ws
+```
+
+And subscribe to topics:
+
+- `court_availability`: Real-time court status updates
+- `live_score`: Live match score updates
+
+## Development Notes
+
+### Project Structure
+
+- `TennisApp/Models`: Data models
+- `TennisApp/Controllers`: API endpoints
+- `TennisApp/Components`: Blazor components
+- `TennisApp/Data`: Database context
+- `TennisApp/WebSockets`: WebSocket handlers
+- `TennisApp/DTOs`: Data transfer objects
+
+### Database Migrations
+To generate a new migration:
+
+```bash
+dotnet ef migrations add <MigrationName>
+```
+
+To apply migrations:
+
+```bash
+dotnet ef database update
+```
+
+## Mobile Application Integration
+
+The web application provides API endpoints for integration with the mobile application. The mobile app can:
+
+1. Connect to WebSockets for real-time updates
+2. Use REST APIs to manage matches, tournaments, etc.
+3. Connect to mechanical scoreboards via Bluetooth Low Energy
+4. Send score updates to the server
+
+## Hardware Integration
+
+The system supports integration with mechanical scoreboards through the mobile application. Key considerations:
+
+- Bluetooth Low Energy connectivity
+- Battery optimization (hardware client runs on battery)
+- Score detection mechanisms
+- Data transmission protocol
+
+## Contributors
+
+- Dominik Ötvös - Software Developer
+- Luka Ojdanić - Software Developer
+- Ngoc Duy Lâm - Software Developer
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+[License](LICENSE)
+
+---
+
+*This project was developed as part of the lab course at KdG (Karel de Grote Hogeschool).*
