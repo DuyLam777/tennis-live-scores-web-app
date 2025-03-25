@@ -11,9 +11,9 @@ namespace TennisApp.Controllers
     public class CourtsController : ControllerBase
     {
         private readonly TennisAppContext _context;
-        private readonly WebSocketHandler _webSocketHandler;
+        private readonly IWebSocketHandler _webSocketHandler;
 
-        public CourtsController(TennisAppContext context, WebSocketHandler webSocketHandler)
+        public CourtsController(TennisAppContext context, IWebSocketHandler webSocketHandler)
         {
             _context = context;
             _webSocketHandler = webSocketHandler;
@@ -49,24 +49,30 @@ namespace TennisApp.Controllers
                 return BadRequest();
             }
 
-            // Check if occupation status changed
-            var existingCourt = await _context
-                .Court.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == id);
-            bool occupationChanged =
-                existingCourt != null && existingCourt.IsOccupied != court.IsOccupied;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            _context.Entry(court).State = EntityState.Modified;
+            // Fetch the existing entity from the database
+            var existingCourt = await _context.Court.FindAsync(id);
+            if (existingCourt == null)
+            {
+                return NotFound();
+            }
+
+            // Update the properties of the existing entity
+            existingCourt.Name = court.Name;
+            existingCourt.IsOccupied = court.IsOccupied;
+            existingCourt.IsIndoor = court.IsIndoor;
 
             try
             {
+                // Save the changes
                 await _context.SaveChangesAsync();
 
-                // If occupation status changed, broadcast the update
-                if (occupationChanged)
-                {
-                    await _webSocketHandler.BroadcastCourtAvailabilityAsync();
-                }
+                // Broadcast the updated court availability
+                await _webSocketHandler.BroadcastCourtAvailabilityAsync();
             }
             catch (DbUpdateConcurrencyException)
             {

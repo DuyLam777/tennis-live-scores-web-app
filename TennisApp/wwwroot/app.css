@@ -32,6 +32,28 @@
 
     --bs-body-color: var(--text);
     --bs-body-bg: var(--background);
+
+    /* Bootstrap color variable overrides */
+    --bs-primary: var(--primary);
+    --bs-secondary: var(--secondary);
+    --bs-success: var(--success);
+    --bs-info: var(--tertiary);
+    --bs-warning: var(--secondary);
+    --bs-danger: var(--danger);
+    --bs-light: var(--overlay);
+    --bs-dark: var(--surface);
+
+    --bs-primary-rgb: 137, 180, 250;
+    --bs-secondary-rgb: 203, 166, 247;
+    --bs-success-rgb: 166, 227, 161;
+    --bs-info-rgb: 116, 199, 236;
+    --bs-warning-rgb: 249, 226, 175;
+    --bs-danger-rgb: 243, 139, 168;
+    --bs-light-rgb: 49, 50, 68;
+    --bs-dark-rgb: 30, 30, 46;
+
+    --bs-body-color: var(--text);
+    --bs-body-bg: var(--background);
 }
 
 /* Base styles */

@@ -20,7 +20,7 @@ namespace TennisApp.Controllers
         public MatchesController(
             TennisAppContext context,
             ILogger<MatchesController> logger,
-            WebSocketHandler webSocketHandler
+            IWebSocketHandler webSocketHandler
         )
         {
             _context = context;

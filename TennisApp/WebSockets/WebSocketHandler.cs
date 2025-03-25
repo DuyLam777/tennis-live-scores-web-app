@@ -323,7 +323,7 @@ namespace TennisApp.WebSockets
             await SendMessageToSocketAsync(socketId, "live_score", matches);
         }
 
-        public async Task BroadcastCourtAvailabilityAsync()
+        public virtual async Task BroadcastCourtAvailabilityAsync()
         {
             _logger.LogInformation("Starting court availability broadcast");
 

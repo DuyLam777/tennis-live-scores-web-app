@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TennisApp.Models;
+
 public class Scoreboard
 {
     // Remove this if its not needed for the webapp, but it is needed for the mobile app
