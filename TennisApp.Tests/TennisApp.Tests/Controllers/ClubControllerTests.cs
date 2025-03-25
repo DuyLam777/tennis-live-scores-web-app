@@ -62,7 +62,9 @@ namespace TennisApp.Tests.Controllers
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Club>>>(result);
-            var returnedClubs = Assert.IsAssignableFrom<List<Club>>(actionResult.Value);
+            // Check for JsonResult instead of direct value
+            var jsonResult = Assert.IsType<JsonResult>(actionResult.Result);
+            var returnedClubs = Assert.IsAssignableFrom<List<Club>>(jsonResult.Value);
             Assert.Equal(2, returnedClubs.Count);
         }
 
@@ -84,7 +86,9 @@ namespace TennisApp.Tests.Controllers
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<Club>>(result);
-            var returnedClub = Assert.IsType<Club>(actionResult.Value);
+            // Check for JsonResult instead of direct value
+            var jsonResult = Assert.IsType<JsonResult>(actionResult.Result);
+            var returnedClub = Assert.IsType<Club>(jsonResult.Value);
             Assert.Equal(club.Id, returnedClub.Id);
             Assert.Equal(club.Name, returnedClub.Name);
         }
@@ -110,8 +114,9 @@ namespace TennisApp.Tests.Controllers
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<Club>>(result);
-            var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-            var returnedClub = Assert.IsType<Club>(createdAtActionResult.Value);
+            // Check for JsonResult instead of CreatedAtActionResult
+            var jsonResult = Assert.IsType<JsonResult>(actionResult.Result);
+            var returnedClub = Assert.IsType<Club>(jsonResult.Value);
             Assert.Equal(club.Name, returnedClub.Name);
             Assert.Equal(1, await _context.Club.CountAsync());
         }
