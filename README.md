@@ -232,6 +232,7 @@ And subscribe to topics:
 - `TennisApp/DTOs`: Data transfer objects
 
 ### Database Migrations
+
 To generate a new migration:
 
 ```bash

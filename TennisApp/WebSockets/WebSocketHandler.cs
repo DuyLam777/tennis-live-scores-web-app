@@ -169,20 +169,25 @@ namespace TennisApp.WebSockets
                     case "get":
                         await SendResourceDataAsync(socketId, request.Topic);
                         break;
-                        
+
                     case "message":
                         // Process message for a topic
                         if (request.Topic == "live_score" && !string.IsNullOrEmpty(request.Message))
                         {
                             // Use service provider to resolve LiveScoreService at runtime
                             using var scope = _serviceProvider.CreateScope();
-                            var liveScoreService = scope.ServiceProvider.GetRequiredService<LiveScoreService>();
+                            var liveScoreService =
+                                scope.ServiceProvider.GetRequiredService<LiveScoreService>();
                             await liveScoreService.ProcessMessageAsync(request.Message);
-                            _logger.LogInformation($"Processed live_score message: {request.Message}");
+                            _logger.LogInformation(
+                                $"Processed live_score message: {request.Message}"
+                            );
                         }
                         else
                         {
-                            _logger.LogWarning($"Unknown topic: '{request.Topic}' or message is empty");
+                            _logger.LogWarning(
+                                $"Unknown topic: '{request.Topic}' or message is empty"
+                            );
                         }
                         break;
 
@@ -294,36 +299,38 @@ namespace TennisApp.WebSockets
 
             await SendMessageToSocketAsync(socketId, "court_availability", courts);
         }
-        
+
         private async Task SendLiveScoreDataAsync(string socketId)
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<Data.TennisAppContext>();
 
-            var matches = await dbContext.Match
-                .Include(m => m.Sets)
+            var matches = await dbContext
+                .Match.Include(m => m.Sets)
                 .Select(m => new
                 {
                     Id = m.Id,
                     m.Player1Name,
                     m.Player2Name,
-                    Sets = m.Sets.Select(s => new
-                    {
-                        s.SetNumber,
-                        s.Player1Games,
-                        s.Player2Games,
-                        s.IsCompleted,
-                        s.WinnerId
-                    }).ToList()
+                    Sets = m
+                        .Sets.Select(s => new
+                        {
+                            s.SetNumber,
+                            s.Player1Games,
+                            s.Player2Games,
+                            s.IsCompleted,
+                            s.WinnerId,
+                        })
+                        .ToList(),
                 })
                 .ToListAsync();
 
             _logger.LogInformation($"Sending {matches.Count} matches to client {socketId}");
-            
+
             await SendMessageToSocketAsync(socketId, "live_score", matches);
         }
 
-        public virtual async Task BroadcastCourtAvailabilityAsync()
+        public async Task BroadcastCourtAvailabilityAsync()
         {
             _logger.LogInformation("Starting court availability broadcast");
 
@@ -490,7 +497,7 @@ namespace TennisApp.WebSockets
 
         [JsonPropertyName("topic")]
         public string Topic { get; set; } = string.Empty;
-        
+
         [JsonPropertyName("message")]
         public string? Message { get; set; }
     }

@@ -20,7 +20,7 @@ namespace TennisApp.Controllers
         public MatchesController(
             TennisAppContext context,
             ILogger<MatchesController> logger,
-            IWebSocketHandler webSocketHandler
+            WebSocketHandler webSocketHandler
         )
         {
             _context = context;
@@ -464,8 +464,8 @@ namespace TennisApp.Controllers
             _logger.LogInformation("Retrieving all matches");
             try
             {
-                var matches = await _context.Match
-                    .Include(m => m.Court)
+                var matches = await _context
+                    .Match.Include(m => m.Court)
                     .Include(m => m.Player1)
                     .Include(m => m.Player2)
                     .Include(m => m.Sets)
@@ -485,20 +485,32 @@ namespace TennisApp.Controllers
                         }
                         : null,
                     Player1 = match.Player1 != null
-                        ? new { Id = match.Player1.Id, Name = match.Player1.Name, Country = match.Player1.Country }
+                        ? new
+                        {
+                            Id = match.Player1.Id,
+                            Name = match.Player1.Name,
+                            Country = match.Player1.Country,
+                        }
                         : null,
                     Player2 = match.Player2 != null
-                        ? new { Id = match.Player2.Id, Name = match.Player2.Name, Country = match.Player2.Country }
+                        ? new
+                        {
+                            Id = match.Player2.Id,
+                            Name = match.Player2.Name,
+                            Country = match.Player2.Country,
+                        }
                         : null,
-                    Sets = match.Sets.Select(s => new
-                    {
-                        Id = s.Id,
-                        SetNumber = s.SetNumber,
-                        Player1Games = s.Player1Games,
-                        Player2Games = s.Player2Games,
-                        IsCompleted = s.IsCompleted,
-                        WinnerId = s.WinnerId,
-                    }).ToList(),
+                    Sets = match
+                        .Sets.Select(s => new
+                        {
+                            Id = s.Id,
+                            SetNumber = s.SetNumber,
+                            Player1Games = s.Player1Games,
+                            Player2Games = s.Player2Games,
+                            IsCompleted = s.IsCompleted,
+                            WinnerId = s.WinnerId,
+                        })
+                        .ToList(),
                 });
 
                 return Ok(matchesData);
