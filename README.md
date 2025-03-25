@@ -84,7 +84,7 @@ The platform consists of three main components:
 ### Prerequisites
 
 - Install [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
-- Install [PostgreSQL](https://www.postgresql.org/download/)
+- Install [Docker](https://www.docker.com/get-started)
 
 ### Database Setup
 
@@ -100,7 +100,7 @@ docker-compose up -d
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone git@gitlab.com:kdg-ti/the-lab/teams-24-25/linux-goons-tennis-live-scores/web-app.git
 cd TennisApp
 ```
 
